@@ -246,22 +246,15 @@ export function TaskBlip({ task }: TaskBlipProps) {
           )}
         </div>
 
-        {/* Hover tooltip - shows from current time to due date */}
+        {/* Hover tooltip - shows current time only */}
         {isHovered && !isDraggingThis && !isConnectingDependency && (
           <div
             className="absolute z-[100] pointer-events-none left-1/2 -translate-x-1/2 bottom-full mb-2"
           >
             <div className="bg-gray-900/95 border border-gray-700 rounded-md px-2 py-1 shadow-lg backdrop-blur-sm">
-              <div className="text-xs text-gray-300 font-medium whitespace-nowrap">
+              <div className="text-xs text-gray-300 font-medium whitespace-nowrap flex items-center gap-1.5">
+                <span className="text-gray-400">🕐</span>
                 {currentTime.toLocaleDateString("en-US", {
-                  month: "short",
-                  day: "numeric",
-                  hour: "numeric",
-                  minute: "2-digit",
-                  hour12: true,
-                })}
-                <span className="text-gray-500 mx-1.5">→</span>
-                {task.dueDate.toLocaleDateString("en-US", {
                   month: "short",
                   day: "numeric",
                   hour: "numeric",
