@@ -162,7 +162,7 @@ export function DependencyConnections() {
           orient="auto"
           markerUnits="strokeWidth"
         >
-          <path d="M0,0 L0,6 L9,3 z" fill="#10b981" />
+          <path d="M0,0 L0,6 L9,3 z" fill="#a1a1aa" />
         </marker>
 
         {/* Arrow marker for normal connections */}
@@ -201,7 +201,7 @@ export function DependencyConnections() {
                   <path
                     d={path}
                     fill="none"
-                    stroke="#10b981"
+                    stroke="#a1a1aa"
                     strokeWidth="4"
                     opacity="0.3"
                     filter="url(#connection-glow)"
@@ -212,7 +212,7 @@ export function DependencyConnections() {
                 <path
                   d={path}
                   fill="none"
-                  stroke={isActive ? "#10b981" : "#6b7280"}
+                  stroke={isActive ? "#a1a1aa" : "#6b7280"}
                   strokeWidth={isActive ? "2.5" : "1.5"}
                   strokeDasharray={isActive ? "0" : "5 5"}
                   opacity={isActive ? "0.9" : "0.4"}
@@ -228,13 +228,13 @@ export function DependencyConnections() {
                       cy={(fromY + toY) / 2}
                       r="12"
                       fill="#1f2937"
-                      stroke="#10b981"
+                      stroke="#a1a1aa"
                       strokeWidth="1.5"
                     />
                     <text
                       x={(fromX + toX) / 2}
                       y={(fromY + toY) / 2}
-                      fill="#10b981"
+                      fill="#a1a1aa"
                       fontSize="10"
                       fontWeight="600"
                       textAnchor="middle"
@@ -288,7 +288,7 @@ export function DependencyConnections() {
             return (
               <path
                 d={curvePath}
-                stroke="#10b981"
+                stroke="#a1a1aa"
                 strokeWidth="2"
                 fill="none"
                 strokeDasharray="5 5"

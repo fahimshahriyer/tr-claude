@@ -103,7 +103,7 @@ export function EnhancedControls() {
         <div className="bg-gray-900/90 backdrop-blur-sm border border-gray-700 rounded-lg p-2 flex gap-2">
           <button
             onClick={() => setIsCreateModalOpen(true)}
-            className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded font-medium transition-colors flex items-center gap-2"
+            className="px-4 py-2 bg-zinc-600 hover:bg-zinc-700 text-white rounded font-medium transition-colors flex items-center gap-2"
             title="Create new task (N)"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -140,7 +140,7 @@ export function EnhancedControls() {
           <button
             onClick={handleZoomIn}
             disabled={zoom >= CONSTANTS.MAX_ZOOM}
-            className="w-10 h-10 flex items-center justify-center rounded hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed text-emerald-400 font-bold transition-colors"
+            className="w-10 h-10 flex items-center justify-center rounded hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed text-zinc-400 font-bold transition-colors"
             title="Zoom in (+)"
           >
             +
@@ -149,7 +149,7 @@ export function EnhancedControls() {
           <button
             onClick={handleZoomOut}
             disabled={zoom <= CONSTANTS.MIN_ZOOM}
-            className="w-10 h-10 flex items-center justify-center rounded hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed text-emerald-400 font-bold transition-colors"
+            className="w-10 h-10 flex items-center justify-center rounded hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed text-zinc-400 font-bold transition-colors"
             title="Zoom out (-)"
           >
             −
@@ -187,7 +187,7 @@ export function EnhancedControls() {
             onClick={() => setShowFilters(!showFilters)}
             className={`p-3 rounded-lg transition-all ${
               showFilters
-                ? "bg-emerald-900/50 border border-emerald-500 text-emerald-400"
+                ? "bg-zinc-900/50 border border-zinc-500 text-zinc-300"
                 : "bg-gray-800 hover:bg-gray-700 text-gray-400"
             }`}
             title="Toggle filters (F)"
@@ -326,7 +326,7 @@ export function EnhancedControls() {
                 value={filterQuery}
                 onChange={(e) => setFilterQuery(e.target.value)}
                 placeholder="Search tasks..."
-                className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-emerald-500"
+                className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-zinc-500"
               />
             </div>
 
@@ -336,7 +336,7 @@ export function EnhancedControls() {
               <select
                 value={filterPriority}
                 onChange={(e) => setFilterPriority(e.target.value as any)}
-                className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-emerald-500"
+                className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-zinc-500"
               >
                 <option value="all">All</option>
                 <option value="high">High</option>

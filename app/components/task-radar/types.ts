@@ -88,14 +88,14 @@ export const CONSTANTS = {
 } as const;
 
 export const PRIORITY_COLORS = {
-  low: "#22c55e", // green
-  medium: "#eab308", // yellow
-  high: "#ef4444", // red
+  low: "#a1a1aa", // zinc-400 - light grey
+  medium: "#71717a", // zinc-500 - medium grey
+  high: "#52525b", // zinc-600 - dark grey
 } as const;
 
 export const TIME_COLORS = {
-  overdue: "#ef4444", // red
-  urgent: "#f97316", // orange (<1 day)
-  soon: "#eab308", // yellow (<7 days)
-  later: "#22c55e", // green (>7 days)
+  overdue: "#3f3f46", // zinc-700 - very dark grey
+  urgent: "#52525b", // zinc-600 - dark grey (<1 day)
+  soon: "#71717a", // zinc-500 - medium grey (<7 days)
+  later: "#a1a1aa", // zinc-400 - light grey (>7 days)
 } as const;
