@@ -247,12 +247,12 @@ export function TaskBlip({ task }: TaskBlipProps) {
           )}
         </div>
 
-        {/* Tooltip showing "TO -> From" */}
+        {/* Hover tooltip - shows due date and time remaining */}
         {isHovered && !isDraggingThis && !isConnectingDependency && (
           <div
             className="absolute z-[100] pointer-events-none left-1/2 -translate-x-1/2"
             style={{
-              top: `${CONSTANTS.TASK_BLIP_HEIGHT + 8}px`,
+              top: `${CONSTANTS.TASK_BLIP_HEIGHT + 16}px`,
             }}
           >
             <div className="bg-gray-900/95 border border-gray-700 rounded-md px-2 py-1 shadow-lg backdrop-blur-sm">
@@ -264,8 +264,34 @@ export function TaskBlip({ task }: TaskBlipProps) {
                   minute: "2-digit",
                   hour12: true,
                 })}
+                <span className="text-gray-500 mx-1.5">•</span>
+                <span className={isOverdue ? "text-red-400" : isUrgent ? "text-orange-400" : "text-gray-400"}>
+                  {timeRemaining}
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Drag tooltip - shows new date → original date */}
+        {isDraggingThis && dragState.newDueDate && (
+          <div
+            className="absolute z-[100] pointer-events-none left-1/2 -translate-x-1/2"
+            style={{
+              top: `${CONSTANTS.TASK_BLIP_HEIGHT + 16}px`,
+            }}
+          >
+            <div className="bg-gray-900/95 border border-emerald-500 rounded-md px-2 py-1 shadow-lg backdrop-blur-sm">
+              <div className="text-xs text-emerald-300 font-medium whitespace-nowrap">
+                {dragState.newDueDate.toLocaleDateString("en-US", {
+                  month: "short",
+                  day: "numeric",
+                  hour: "numeric",
+                  minute: "2-digit",
+                  hour12: true,
+                })}
                 <span className="text-gray-500 mx-1.5">→</span>
-                {currentTime.toLocaleDateString("en-US", {
+                {task.dueDate.toLocaleDateString("en-US", {
                   month: "short",
                   day: "numeric",
                   hour: "numeric",
