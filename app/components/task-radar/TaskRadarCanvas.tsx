@@ -215,6 +215,11 @@ export function TaskRadarCanvas() {
                 month: "short",
                 day: "numeric",
                 year: cursorDate.getFullYear() !== new Date().getFullYear() ? "numeric" : undefined,
+              })}{" "}
+              {cursorDate.toLocaleTimeString("en-US", {
+                hour: "numeric",
+                minute: "2-digit",
+                hour12: true,
               })}
             </div>
           </div>

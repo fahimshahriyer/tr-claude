@@ -72,11 +72,12 @@ export function cartesianToPolar(
 /**
  * Calculate fractional days until a calendar day boundary (N days from now)
  * For date-based temporal system where rings represent calendar day boundaries
+ * The ring represents the END of that day (midnight after that day)
  */
 export function daysUntilCalendarDay(currentTime: Date, daysAhead: number): number {
-  // Get midnight of the target day
+  // Get midnight AFTER the target day (end of that day)
   const targetDate = new Date(currentTime);
-  targetDate.setDate(targetDate.getDate() + daysAhead);
+  targetDate.setDate(targetDate.getDate() + daysAhead + 1);
   targetDate.setHours(0, 0, 0, 0);
 
   // Calculate fractional days until that midnight
@@ -85,17 +86,12 @@ export function daysUntilCalendarDay(currentTime: Date, daysAhead: number): numb
 }
 
 /**
- * Calculate which calendar date a distance represents
+ * Calculate which date and time a distance represents
  */
 export function dateFromDistance(currentTime: Date, fractionalDays: number): Date {
-  // Add the fractional days to current time
+  // Add the fractional days to current time to get the exact time
   const targetTime = new Date(currentTime.getTime() + fractionalDays * 24 * 60 * 60 * 1000);
-
-  // Get the calendar day boundary (midnight) of that time
-  const calendarDay = new Date(targetTime);
-  calendarDay.setHours(0, 0, 0, 0);
-
-  return calendarDay;
+  return targetTime;
 }
 
 /**
