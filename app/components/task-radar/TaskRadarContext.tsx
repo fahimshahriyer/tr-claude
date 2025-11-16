@@ -27,6 +27,28 @@ interface TaskRadarContextValue extends RadarState {
 
   // Time
   updateCurrentTime: () => void;
+  setTimeOffset: (offset: number) => void;
+
+  // Dependencies
+  toggleDependencyMode: () => void;
+  startConnectingDependency: (taskId: string) => void;
+  finishConnectingDependency: (toTaskId: string) => void;
+  cancelConnectingDependency: () => void;
+  removeDependency: (taskId: string, dependencyId: string) => void;
+
+  // Filters
+  setFilterQuery: (query: string) => void;
+  setFilterPriority: (priority: Priority | "all") => void;
+  setFilterStatus: (status: TaskStatus | "all") => void;
+  getFilteredTasks: () => Task[];
+
+  // Theme
+  setTheme: (theme: "dark" | "light") => void;
+
+  // Data persistence
+  exportTasks: () => string;
+  importTasks: (data: string) => void;
+  clearAllTasks: () => void;
 }
 
 const TaskRadarContext = createContext<TaskRadarContextValue | null>(null);
@@ -54,9 +76,16 @@ export function TaskRadarProvider({ children }: { children: React.ReactNode }) {
   const [centerLockEnabled, setCenterLockEnabled] = useState(true);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [currentTime, setCurrentTime] = useState(new Date());
-  const [timeOffset] = useState(0);
+  const [timeOffset, setTimeOffsetState] = useState(0);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [taskPositions, setTaskPositions] = useState<Map<string, TaskPosition>>(new Map());
+  const [showDependencies, setShowDependencies] = useState(false);
+  const [isConnectingDependency, setIsConnectingDependency] = useState(false);
+  const [connectingFromTaskId, setConnectingFromTaskId] = useState<string | null>(null);
+  const [filterQuery, setFilterQuery] = useState("");
+  const [filterPriority, setFilterPriority] = useState<Priority | "all">("all");
+  const [filterStatus, setFilterStatus] = useState<TaskStatus | "all">("all");
+  const [theme, setTheme] = useState<"dark" | "light">("dark");
 
   // Drag state
   const [dragState, setDragState] = useState<DragState>({
@@ -72,11 +101,37 @@ export function TaskRadarProvider({ children }: { children: React.ReactNode }) {
   // Ref for time interval
   const timeIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Initialize with sample tasks
+  // Initialize with tasks from localStorage or sample tasks
   useEffect(() => {
-    const sampleTasks = generateSampleTasks();
-    setTasks(sampleTasks);
+    const savedTasks = localStorage.getItem("taskRadarTasks");
+    if (savedTasks) {
+      try {
+        const parsed = JSON.parse(savedTasks);
+        // Convert date strings back to Date objects
+        const tasksWithDates = parsed.map((task: Task) => ({
+          ...task,
+          dueDate: new Date(task.dueDate),
+          createdAt: task.createdAt ? new Date(task.createdAt) : undefined,
+          completedAt: task.completedAt ? new Date(task.completedAt) : undefined,
+        }));
+        setTasks(tasksWithDates);
+      } catch (e) {
+        console.error("Failed to parse saved tasks", e);
+        const sampleTasks = generateSampleTasks();
+        setTasks(sampleTasks);
+      }
+    } else {
+      const sampleTasks = generateSampleTasks();
+      setTasks(sampleTasks);
+    }
   }, []);
+
+  // Save tasks to localStorage whenever they change
+  useEffect(() => {
+    if (tasks.length > 0) {
+      localStorage.setItem("taskRadarTasks", JSON.stringify(tasks));
+    }
+  }, [tasks]);
 
   // Update task positions when tasks, zoom, viewport, or time changes
   useEffect(() => {
@@ -117,7 +172,12 @@ export function TaskRadarProvider({ children }: { children: React.ReactNode }) {
 
   // Actions
   const addTask = useCallback((task: Task) => {
-    setTasks((prev) => [...prev, task]);
+    const newTask = {
+      ...task,
+      id: task.id || `task-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      createdAt: task.createdAt || new Date(),
+    };
+    setTasks((prev) => [...prev, newTask]);
   }, []);
 
   const updateTask = useCallback((taskId: string, updates: Partial<Task>) => {
@@ -272,6 +332,124 @@ export function TaskRadarProvider({ children }: { children: React.ReactNode }) {
     });
   }, [dragState, viewport, zoom]);
 
+  // Dependency methods
+  const toggleDependencyMode = useCallback(() => {
+    setShowDependencies((prev) => !prev);
+    if (isConnectingDependency) {
+      cancelConnectingDependency();
+    }
+  }, [isConnectingDependency]);
+
+  const startConnectingDependency = useCallback((taskId: string) => {
+    setIsConnectingDependency(true);
+    setConnectingFromTaskId(taskId);
+  }, []);
+
+  const finishConnectingDependency = useCallback(
+    (toTaskId: string) => {
+      if (!connectingFromTaskId || connectingFromTaskId === toTaskId) {
+        cancelConnectingDependency();
+        return;
+      }
+
+      // Check for circular dependencies
+      const wouldCreateCircular = (fromId: string, toId: string): boolean => {
+        const task = tasks.find((t) => t.id === toId);
+        if (!task || !task.dependencies) return false;
+        if (task.dependencies.includes(fromId)) return true;
+        return task.dependencies.some((depId) => wouldCreateCircular(fromId, depId));
+      };
+
+      if (wouldCreateCircular(toTaskId, connectingFromTaskId)) {
+        alert("Cannot create circular dependency!");
+        cancelConnectingDependency();
+        return;
+      }
+
+      // Add dependency
+      setTasks((prev) =>
+        prev.map((task) =>
+          task.id === toTaskId
+            ? {
+                ...task,
+                dependencies: [...(task.dependencies || []), connectingFromTaskId],
+              }
+            : task
+        )
+      );
+
+      cancelConnectingDependency();
+    },
+    [connectingFromTaskId, tasks]
+  );
+
+  const cancelConnectingDependency = useCallback(() => {
+    setIsConnectingDependency(false);
+    setConnectingFromTaskId(null);
+  }, []);
+
+  const removeDependency = useCallback((taskId: string, dependencyId: string) => {
+    setTasks((prev) =>
+      prev.map((task) =>
+        task.id === taskId
+          ? {
+              ...task,
+              dependencies: task.dependencies?.filter((id) => id !== dependencyId),
+            }
+          : task
+      )
+    );
+  }, []);
+
+  // Filter methods
+  const getFilteredTasks = useCallback((): Task[] => {
+    return tasks.filter((task) => {
+      // Text search
+      if (filterQuery) {
+        const query = filterQuery.toLowerCase();
+        const matchesTitle = task.title.toLowerCase().includes(query);
+        const matchesDescription = task.description?.toLowerCase().includes(query);
+        const matchesTags = task.tags?.some((tag) => tag.toLowerCase().includes(query));
+        if (!matchesTitle && !matchesDescription && !matchesTags) return false;
+      }
+
+      // Priority filter
+      if (filterPriority !== "all" && task.priority !== filterPriority) return false;
+
+      // Status filter
+      if (filterStatus !== "all" && task.status !== filterStatus) return false;
+
+      return true;
+    });
+  }, [tasks, filterQuery, filterPriority, filterStatus]);
+
+  // Data persistence methods
+  const exportTasks = useCallback((): string => {
+    return JSON.stringify(tasks, null, 2);
+  }, [tasks]);
+
+  const importTasks = useCallback((data: string) => {
+    try {
+      const parsed = JSON.parse(data);
+      const tasksWithDates = parsed.map((task: Task) => ({
+        ...task,
+        dueDate: new Date(task.dueDate),
+        createdAt: task.createdAt ? new Date(task.createdAt) : undefined,
+        completedAt: task.completedAt ? new Date(task.completedAt) : undefined,
+      }));
+      setTasks(tasksWithDates);
+    } catch (e) {
+      alert("Failed to import tasks. Invalid JSON format.");
+    }
+  }, []);
+
+  const clearAllTasks = useCallback(() => {
+    if (confirm("Are you sure you want to delete all tasks? This cannot be undone.")) {
+      setTasks([]);
+      localStorage.removeItem("taskRadarTasks");
+    }
+  }, []);
+
   const value: TaskRadarContextValue = {
     // State
     zoom,
@@ -284,6 +462,13 @@ export function TaskRadarProvider({ children }: { children: React.ReactNode }) {
     taskPositions,
     viewport,
     dragState,
+    showDependencies,
+    isConnectingDependency,
+    connectingFromTaskId,
+    filterQuery,
+    filterPriority,
+    filterStatus,
+    theme,
 
     // Setters
     setViewport,
@@ -298,11 +483,33 @@ export function TaskRadarProvider({ children }: { children: React.ReactNode }) {
     toggleCenterLock,
     resetView,
     updateCurrentTime,
+    setTimeOffset: setTimeOffsetState,
 
     // Drag
     startDrag,
     updateDrag,
     endDrag,
+
+    // Dependencies
+    toggleDependencyMode,
+    startConnectingDependency,
+    finishConnectingDependency,
+    cancelConnectingDependency,
+    removeDependency,
+
+    // Filters
+    setFilterQuery,
+    setFilterPriority,
+    setFilterStatus,
+    getFilteredTasks,
+
+    // Theme
+    setTheme,
+
+    // Data persistence
+    exportTasks,
+    importTasks,
+    clearAllTasks,
   };
 
   return <TaskRadarContext.Provider value={value}>{children}</TaskRadarContext.Provider>;

@@ -10,31 +10,51 @@ interface TaskBlipProps {
 }
 
 export function TaskBlip({ task }: TaskBlipProps) {
-  const { taskPositions, selectedTaskId, selectTask, dragState, startDrag, currentTime } =
-    useTaskRadar();
+  const {
+    taskPositions,
+    selectedTaskId,
+    selectTask,
+    dragState,
+    startDrag,
+    currentTime,
+    isConnectingDependency,
+    connectingFromTaskId,
+    finishConnectingDependency,
+  } = useTaskRadar();
 
   const blipRef = useRef<HTMLDivElement>(null);
   const isDraggingThis = dragState.isDragging && dragState.taskId === task.id;
   const isSelected = selectedTaskId === task.id;
+  const isConnectingFrom = isConnectingDependency && connectingFromTaskId === task.id;
+  const canConnectTo = isConnectingDependency && connectingFromTaskId !== task.id;
 
-  // Handle mouse down to start drag
+  // Handle mouse down to start drag (only if not in dependency mode)
   const handleMouseDown = useCallback(
     (e: React.MouseEvent) => {
       e.stopPropagation();
-      startDrag(task.id, e.clientX, e.clientY);
+      if (!isConnectingDependency) {
+        startDrag(task.id, e.clientX, e.clientY);
+      }
     },
-    [startDrag, task.id]
+    [startDrag, task.id, isConnectingDependency]
   );
 
-  // Handle click to select (when not dragging)
+  // Handle click to select or connect dependency
   const handleClick = useCallback(
     (e: React.MouseEvent) => {
       e.stopPropagation();
-      if (!isDraggingThis) {
+
+      if (isConnectingDependency) {
+        // Connecting dependency
+        if (canConnectTo) {
+          finishConnectingDependency(task.id);
+        }
+      } else if (!isDraggingThis) {
+        // Normal selection
         selectTask(isSelected ? null : task.id);
       }
     },
-    [isDraggingThis, isSelected, selectTask, task.id]
+    [isDraggingThis, isSelected, selectTask, task.id, isConnectingDependency, canConnectTo, finishConnectingDependency]
   );
 
   // Early return after all hooks
@@ -45,6 +65,7 @@ export function TaskBlip({ task }: TaskBlipProps) {
   const timeColor = getTimeColor(daysRemaining);
   const timeRemaining = formatTimeRemaining(daysRemaining);
   const isOverdue = daysRemaining < 0;
+  const isUrgent = daysRemaining >= 0 && daysRemaining < 1; // Less than 1 day
 
   // Calculate position (use drag position if dragging this task)
   let displayX = position.x;
@@ -63,9 +84,13 @@ export function TaskBlip({ task }: TaskBlipProps) {
     <>
       <div
         ref={blipRef}
-        className={`absolute transition-all duration-100 cursor-grab active:cursor-grabbing ${
-          isDraggingThis ? "z-50 scale-110" : isSelected ? "z-40" : "z-30"
-        }`}
+        className={`absolute transition-all duration-300 animate-fade-in ${
+          isConnectingDependency
+            ? canConnectTo
+              ? "cursor-crosshair z-40"
+              : "cursor-not-allowed z-30"
+            : "cursor-grab active:cursor-grabbing"
+        } ${isDraggingThis ? "z-50 scale-110" : isSelected || isConnectingFrom ? "z-40" : "z-30"}`}
         style={{
           left: `${adjustedX}px`,
           top: `${adjustedY}px`,
@@ -77,14 +102,22 @@ export function TaskBlip({ task }: TaskBlipProps) {
       >
         <div
           className={`rounded-lg backdrop-blur-sm border transition-all ${
-            isSelected
+            isConnectingFrom
+              ? "bg-blue-900/90 border-blue-500 shadow-lg shadow-blue-500/30 animate-pulse"
+              : canConnectTo
+              ? "bg-gray-900/90 border-yellow-500 shadow-lg shadow-yellow-500/20 hover:scale-110"
+              : isSelected
               ? "bg-gray-900/90 border-emerald-500 shadow-lg shadow-emerald-500/20"
               : isDraggingThis
               ? "bg-gray-900/95 border-emerald-400 shadow-xl shadow-emerald-400/30"
               : "bg-gray-800/80 border-gray-700 hover:border-gray-600 hover:bg-gray-800/90 hover:scale-105"
           }`}
           style={{
-            boxShadow: isDraggingThis
+            boxShadow: isConnectingFrom
+              ? `0 0 30px rgba(59, 130, 246, 0.4)`
+              : canConnectTo
+              ? `0 0 25px rgba(234, 179, 8, 0.3)`
+              : isDraggingThis
               ? `0 0 30px rgba(16, 185, 129, 0.4)`
               : isSelected
               ? `0 0 20px rgba(16, 185, 129, 0.2)`

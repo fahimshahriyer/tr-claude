@@ -12,6 +12,10 @@ export interface Task {
   tags?: string[];
   assignee?: string;
   estimatedHours?: number;
+  dependencies?: string[]; // IDs of tasks this task depends on
+  completedAt?: Date;
+  subtasks?: { id: string; title: string; completed: boolean }[];
+  category?: string;
 }
 
 export interface TaskPosition {
@@ -31,6 +35,13 @@ export interface RadarState {
   timeOffset: number; // milliseconds offset for simulation
   tasks: Task[];
   taskPositions: Map<string, TaskPosition>;
+  showDependencies: boolean;
+  isConnectingDependency: boolean;
+  connectingFromTaskId: string | null;
+  filterQuery: string;
+  filterPriority: Priority | "all";
+  filterStatus: TaskStatus | "all";
+  theme: "dark" | "light";
 }
 
 export interface DragState {
