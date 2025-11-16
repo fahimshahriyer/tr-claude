@@ -39,6 +39,16 @@ export function EnhancedControls() {
   const [showTimeTravel, setShowTimeTravel] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const handleEditSelectedTask = () => {
+    if (selectedTaskId) {
+      const task = tasks.find((t) => t.id === selectedTaskId);
+      if (task) {
+        setEditingTask(task);
+        setIsCreateModalOpen(true);
+      }
+    }
+  };
+
   // Setup keyboard shortcuts
   useKeyboardShortcuts(
     () => setIsCreateModalOpen(true),
@@ -83,16 +93,6 @@ export function EnhancedControls() {
       importTasks(data);
     };
     reader.readAsText(file);
-  };
-
-  const handleEditSelectedTask = () => {
-    if (selectedTaskId) {
-      const task = tasks.find((t) => t.id === selectedTaskId);
-      if (task) {
-        setEditingTask(task);
-        setIsCreateModalOpen(true);
-      }
-    }
   };
 
   return (
