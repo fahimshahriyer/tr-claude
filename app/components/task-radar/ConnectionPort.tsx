@@ -86,7 +86,7 @@ export function ConnectionPort({
           isSource
             ? "opacity-100 bg-blue-500/30 border-blue-500 scale-110"
             : isConnecting
-            ? "opacity-100 bg-emerald-500/30 border-emerald-500 hover:scale-125"
+            ? "opacity-100 bg-zinc-500/30 border-zinc-500 hover:scale-125"
             : isVisible
             ? "opacity-100 bg-gray-500/20 border-gray-500 hover:scale-110"
             : "opacity-0 scale-0"
@@ -106,7 +106,7 @@ export function ConnectionPort({
           isSource
             ? "bg-blue-500 scale-100"
             : isConnecting
-            ? "bg-emerald-500 scale-100 hover:scale-125"
+            ? "bg-zinc-500 scale-100 hover:scale-125"
             : isVisible
             ? "bg-gray-400 scale-100 hover:scale-110"
             : "scale-0"

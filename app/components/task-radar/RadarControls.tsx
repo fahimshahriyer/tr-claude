@@ -37,7 +37,7 @@ export function RadarControls() {
           <button
             onClick={handleZoomIn}
             disabled={zoom >= CONSTANTS.MAX_ZOOM}
-            className="w-10 h-10 flex items-center justify-center rounded hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed text-emerald-400 font-bold transition-colors"
+            className="w-10 h-10 flex items-center justify-center rounded hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed text-zinc-400 font-bold transition-colors"
             title="Zoom in"
           >
             +
@@ -46,7 +46,7 @@ export function RadarControls() {
           <button
             onClick={handleZoomOut}
             disabled={zoom <= CONSTANTS.MIN_ZOOM}
-            className="w-10 h-10 flex items-center justify-center rounded hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed text-emerald-400 font-bold transition-colors"
+            className="w-10 h-10 flex items-center justify-center rounded hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed text-zinc-400 font-bold transition-colors"
             title="Zoom out"
           >
             −
@@ -60,7 +60,7 @@ export function RadarControls() {
           onClick={toggleCenterLock}
           className={`bg-gray-900/90 backdrop-blur-sm border rounded-lg p-3 transition-all ${
             centerLockEnabled
-              ? "border-emerald-500 text-emerald-400"
+              ? "border-zinc-500 text-zinc-400"
               : "border-gray-700 text-gray-400 hover:border-gray-600"
           }`}
           title={centerLockEnabled ? "Center locked (click to unlock)" : "Center unlocked (click to lock)"}
@@ -92,7 +92,7 @@ export function RadarControls() {
         {/* Reset view */}
         <button
           onClick={resetView}
-          className="bg-gray-900/90 backdrop-blur-sm border border-gray-700 text-gray-400 hover:border-gray-600 hover:text-emerald-400 rounded-lg p-3 transition-all"
+          className="bg-gray-900/90 backdrop-blur-sm border border-gray-700 text-gray-400 hover:border-gray-600 hover:text-zinc-400 rounded-lg p-3 transition-all"
           title="Reset view"
         >
           <svg
@@ -114,7 +114,7 @@ export function RadarControls() {
       {/* Top-left legend */}
       <div className="absolute top-4 left-4 z-50">
         <div className="bg-gray-900/90 backdrop-blur-sm border border-gray-700 rounded-lg p-4 space-y-3">
-          <h3 className="text-sm font-semibold text-emerald-400">Priority</h3>
+          <h3 className="text-sm font-semibold text-zinc-400">Priority</h3>
           <div className="space-y-2">
             <div className="flex items-center gap-2 text-xs text-gray-300">
               <div
@@ -147,7 +147,7 @@ export function RadarControls() {
           <div className="flex items-center justify-between text-sm">
             <div className="flex items-center gap-6 text-gray-400">
               <span>
-                Total Tasks: <span className="text-emerald-400 font-semibold">{tasks.length}</span>
+                Total Tasks: <span className="text-zinc-400 font-semibold">{tasks.length}</span>
               </span>
               {todayCount > 0 && (
                 <span>
@@ -171,7 +171,7 @@ export function RadarControls() {
       <div className="absolute top-4 left-1/2 -translate-x-1/2 z-40">
         <div className="bg-gray-900/80 backdrop-blur-sm border border-gray-700 rounded-lg px-4 py-2">
           <p className="text-xs text-gray-400 text-center">
-            <span className="text-emerald-400 font-semibold">Task Radar</span> • Distance from center = time until due
+            <span className="text-zinc-300 font-semibold">Task Radar</span> • Distance from center = time until due
           </p>
         </div>
       </div>

@@ -147,9 +147,9 @@ export function TaskBlip({ task }: TaskBlipProps) {
               : canConnectTo
               ? "bg-gray-900/90 border-yellow-500 shadow-lg shadow-yellow-500/20 hover:scale-110"
               : isSelected
-              ? "bg-gray-900/90 border-emerald-500 shadow-lg shadow-emerald-500/20"
+              ? "bg-gray-900/90 border-zinc-400 shadow-lg shadow-zinc-400/20"
               : isDraggingThis
-              ? "bg-gray-900/95 border-emerald-400 shadow-xl shadow-emerald-400/30"
+              ? "bg-gray-900/95 border-zinc-300 shadow-xl shadow-zinc-300/30"
               : "bg-gray-800/80 border-gray-700 hover:border-gray-600 hover:bg-gray-800/90 hover:scale-105"
           }`}
           style={{
@@ -158,9 +158,9 @@ export function TaskBlip({ task }: TaskBlipProps) {
               : canConnectTo
               ? `0 0 25px rgba(234, 179, 8, 0.3)`
               : isDraggingThis
-              ? `0 0 30px rgba(16, 185, 129, 0.4)`
+              ? `0 0 30px rgba(161, 161, 170, 0.4)`
               : isSelected
-              ? `0 0 20px rgba(16, 185, 129, 0.2)`
+              ? `0 0 20px rgba(161, 161, 170, 0.2)`
               : undefined,
           }}
         >
@@ -270,8 +270,8 @@ export function TaskBlip({ task }: TaskBlipProps) {
           <div
             className="absolute z-[100] pointer-events-none left-1/2 -translate-x-1/2 bottom-full mb-2"
           >
-            <div className="bg-gray-900/95 border border-emerald-500 rounded-md px-2 py-1 shadow-lg backdrop-blur-sm">
-              <div className="text-xs text-emerald-300 font-medium whitespace-nowrap">
+            <div className="bg-gray-900/95 border border-zinc-400 rounded-md px-2 py-1 shadow-lg backdrop-blur-sm">
+              <div className="text-xs text-zinc-300 font-medium whitespace-nowrap">
                 {task.dueDate.toLocaleDateString("en-US", {
                   month: "short",
                   day: "numeric",
