@@ -5,6 +5,7 @@ import { useTaskRadar } from "./TaskRadarContext";
 import { RadarCanvas } from "./RadarCanvas";
 import { TaskBlip } from "./TaskBlip";
 import { DependencyConnections } from "./DependencyConnections";
+import { CONSTANTS } from "./types";
 
 export function TaskRadarCanvas() {
   const {
@@ -19,6 +20,9 @@ export function TaskRadarCanvas() {
     selectTask,
     isConnectingDependency,
     updateConnectingMouse,
+    zoom,
+    currentTime,
+    viewport,
   } = useTaskRadar();
 
   const tasks = getFilteredTasks();
@@ -26,6 +30,8 @@ export function TaskRadarCanvas() {
   const containerRef = useRef<HTMLDivElement>(null);
   const [isPanning, setIsPanning] = useState(false);
   const [panStart, setPanStart] = useState({ x: 0, y: 0 });
+  const [cursorDate, setCursorDate] = useState<Date | null>(null);
+  const [cursorPos, setCursorPos] = useState({ x: 0, y: 0 });
 
   // Update viewport dimensions on mount and resize
   useEffect(() => {
@@ -117,6 +123,40 @@ export function TaskRadarCanvas() {
     [selectTask]
   );
 
+  // Handle cursor movement to show temporal tooltip
+  const handleContainerMouseMove = useCallback(
+    (e: React.MouseEvent) => {
+      if (!containerRef.current || dragState.isDragging || isPanning || isConnectingDependency) {
+        setCursorDate(null);
+        return;
+      }
+
+      const rect = containerRef.current.getBoundingClientRect();
+      const mouseX = e.clientX - rect.left - panOffset.x;
+      const mouseY = e.clientY - rect.top - panOffset.y;
+
+      // Calculate distance from center
+      const dx = mouseX - viewport.centerX;
+      const dy = mouseY - viewport.centerY;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+
+      // Convert distance to days
+      const unscaledDistance = distance / zoom;
+      const days = unscaledDistance / CONSTANTS.BASE_RING_SPACING;
+
+      // Calculate the date
+      const date = new Date(currentTime.getTime() + days * 24 * 60 * 60 * 1000);
+
+      setCursorDate(date);
+      setCursorPos({ x: e.clientX, y: e.clientY });
+    },
+    [dragState.isDragging, isPanning, isConnectingDependency, panOffset, viewport, zoom, currentTime]
+  );
+
+  const handleContainerMouseLeave = useCallback(() => {
+    setCursorDate(null);
+  }, []);
+
   return (
     <div
       ref={containerRef}
@@ -125,6 +165,8 @@ export function TaskRadarCanvas() {
       } ${dragState.isDragging ? "cursor-grabbing" : ""}`}
       onMouseDown={handleBackgroundMouseDown}
       onClick={handleBackgroundClick}
+      onMouseMove={handleContainerMouseMove}
+      onMouseLeave={handleContainerMouseLeave}
     >
       {/* Radar background */}
       <RadarCanvas />
@@ -145,6 +187,31 @@ export function TaskRadarCanvas() {
           <div className="text-center space-y-2">
             <p className="text-gray-500 text-lg">No tasks yet</p>
             <p className="text-gray-600 text-sm">Tasks will appear on the radar based on their due dates</p>
+          </div>
+        </div>
+      )}
+
+      {/* Cursor temporal tooltip */}
+      {cursorDate && (
+        <div
+          className="fixed z-[200] pointer-events-none"
+          style={{
+            left: `${cursorPos.x + 15}px`,
+            top: `${cursorPos.y - 35}px`,
+          }}
+        >
+          <div className="bg-gray-900/95 border border-gray-600 rounded-md px-2 py-1 shadow-lg backdrop-blur-sm">
+            <div className="text-xs text-gray-300 font-medium whitespace-nowrap flex items-center gap-1.5">
+              <span className="text-gray-400">📍</span>
+              {cursorDate.toLocaleDateString("en-US", {
+                month: "short",
+                day: "numeric",
+                year: cursorDate.getFullYear() !== new Date().getFullYear() ? "numeric" : undefined,
+                hour: "numeric",
+                minute: "2-digit",
+                hour12: true,
+              })}
+            </div>
           </div>
         </div>
       )}
