@@ -135,7 +135,7 @@ export function TaskBlip({ task }: TaskBlipProps) {
           left: `${adjustedX}px`,
           top: `${adjustedY}px`,
           width: `${CONSTANTS.TASK_BLIP_WIDTH}px`,
-          minHeight: `${CONSTANTS.TASK_BLIP_HEIGHT}px`,
+          height: `${CONSTANTS.TASK_BLIP_HEIGHT}px`,
         }}
         onMouseDown={handleMouseDown}
         onClick={handleClick}
@@ -143,7 +143,7 @@ export function TaskBlip({ task }: TaskBlipProps) {
         onMouseLeave={() => setIsHovered(false)}
       >
         <div
-          className={`rounded-lg backdrop-blur-sm border transition-all ${
+          className={`rounded-lg backdrop-blur-sm border transition-all h-full flex flex-col ${
             isConnectingFrom
               ? "bg-blue-900/90 border-blue-500 shadow-lg shadow-blue-500/30 animate-pulse"
               : canConnectTo
@@ -167,7 +167,7 @@ export function TaskBlip({ task }: TaskBlipProps) {
           }}
         >
           {/* Drag handle */}
-          <div className="flex items-center justify-center py-1 border-b border-gray-700/50">
+          <div className="flex items-center justify-center py-1 border-b border-gray-700/50 flex-shrink-0">
             <div className="flex gap-1">
               <div className="w-1 h-1 rounded-full bg-gray-600"></div>
               <div className="w-1 h-1 rounded-full bg-gray-600"></div>
@@ -176,19 +176,19 @@ export function TaskBlip({ task }: TaskBlipProps) {
           </div>
 
           {/* Content */}
-          <div className="p-3 space-y-2">
+          <div className="p-3 flex flex-col justify-between flex-1 min-h-0">
             {/* Title and Priority */}
-            <div className="flex items-start gap-2">
+            <div className="flex items-start gap-2 mb-2">
               <div
                 className="w-2 h-2 rounded-full mt-1 flex-shrink-0"
                 style={{ backgroundColor: PRIORITY_COLORS[task.priority] }}
                 title={`${task.priority} priority`}
               />
-              <h3 className="text-sm font-medium text-white line-clamp-2 flex-1">{task.title}</h3>
+              <h3 className="text-sm font-medium text-white line-clamp-2 flex-1 overflow-hidden">{task.title}</h3>
             </div>
 
             {/* Time remaining */}
-            <div className="flex items-center justify-between text-xs">
+            <div className="flex items-center justify-between text-xs flex-shrink-0">
               <span
                 className="font-semibold"
                 style={{ color: timeColor }}
