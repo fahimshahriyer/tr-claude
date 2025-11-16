@@ -14,10 +14,26 @@ export function hashString(str: string): number {
 }
 
 /**
- * Calculate days between two dates
+ * Calculate days between two dates (date-based, not time-based)
+ * Returns fractional days until the target date boundary (midnight)
  */
 export function daysBetween(date1: Date, date2: Date): number {
-  const diff = date2.getTime() - date1.getTime();
+  // If date2 is before date1, it's overdue
+  if (date2 < date1) {
+    const diff = date1.getTime() - date2.getTime();
+    return -(diff / (1000 * 60 * 60 * 24));
+  }
+
+  // Calculate time until the start of date2's day (midnight)
+  const targetMidnight = new Date(date2);
+  targetMidnight.setHours(0, 0, 0, 0);
+
+  // If date2 already has time component, we're measuring to that specific time
+  // Otherwise, measure to the start of that day
+  const hasTimeComponent = date2.getHours() !== 0 || date2.getMinutes() !== 0 || date2.getSeconds() !== 0;
+  const targetDate = hasTimeComponent ? date2 : targetMidnight;
+
+  const diff = targetDate.getTime() - date1.getTime();
   return diff / (1000 * 60 * 60 * 24);
 }
 
@@ -51,6 +67,35 @@ export function cartesianToPolar(
     distance: Math.sqrt(dx * dx + dy * dy),
     angle: Math.atan2(dy, dx),
   };
+}
+
+/**
+ * Calculate fractional days until a calendar day boundary (N days from now)
+ * For date-based temporal system where rings represent calendar day boundaries
+ */
+export function daysUntilCalendarDay(currentTime: Date, daysAhead: number): number {
+  // Get midnight of the target day
+  const targetDate = new Date(currentTime);
+  targetDate.setDate(targetDate.getDate() + daysAhead);
+  targetDate.setHours(0, 0, 0, 0);
+
+  // Calculate fractional days until that midnight
+  const diff = targetDate.getTime() - currentTime.getTime();
+  return diff / (1000 * 60 * 60 * 24);
+}
+
+/**
+ * Calculate which calendar date a distance represents
+ */
+export function dateFromDistance(currentTime: Date, fractionalDays: number): Date {
+  // Add the fractional days to current time
+  const targetTime = new Date(currentTime.getTime() + fractionalDays * 24 * 60 * 60 * 1000);
+
+  // Get the calendar day boundary (midnight) of that time
+  const calendarDay = new Date(targetTime);
+  calendarDay.setHours(0, 0, 0, 0);
+
+  return calendarDay;
 }
 
 /**
@@ -229,9 +274,14 @@ export function formatDetailedTimeRemaining(daysRemaining: number): string {
 
 /**
  * Generate ring labels based on viewport and zoom (adaptive like Google Maps)
+ * Uses date-based positioning where rings represent calendar day boundaries
  */
-export function generateRingLabels(maxRadius: number, zoom: number): Array<{ distance: number; label: string }> {
-  const labels: Array<{ distance: number; label: string }> = [];
+export function generateRingLabels(
+  maxRadius: number,
+  zoom: number,
+  currentTime: Date
+): Array<{ distance: number; label: string; daysAhead: number }> {
+  const labels: Array<{ distance: number; label: string; daysAhead: number }> = [];
 
   // Adaptive intervals based on zoom level (like Google Maps)
   let intervals: number[];
@@ -246,25 +296,28 @@ export function generateRingLabels(maxRadius: number, zoom: number): Array<{ dis
     intervals = [1, 2, 3, 5, 7, 10, 14, 21, 30, 45, 60, 90];
   }
 
-  for (const days of intervals) {
-    const distance = days * CONSTANTS.BASE_RING_SPACING * zoom;
+  for (const daysAhead of intervals) {
+    // Calculate fractional days until this calendar day boundary
+    const fractionalDays = daysUntilCalendarDay(currentTime, daysAhead);
+    const distance = fractionalDays * CONSTANTS.BASE_RING_SPACING * zoom;
+
     if (distance <= maxRadius) {
       let label: string;
-      if (days === 1) label = "Tomorrow";
-      else if (days === 2) label = "2 Days";
-      else if (days === 3) label = "3 Days";
-      else if (days === 5) label = "5 Days";
-      else if (days === 7) label = "1 Week";
-      else if (days === 10) label = "10 Days";
-      else if (days === 14) label = "2 Weeks";
-      else if (days === 21) label = "3 Weeks";
-      else if (days === 30) label = "1 Month";
-      else if (days === 45) label = "1.5 Months";
-      else if (days === 60) label = "2 Months";
-      else if (days === 90) label = "3 Months";
-      else label = `${days}d`;
+      if (daysAhead === 1) label = "Tomorrow";
+      else if (daysAhead === 2) label = "2 Days";
+      else if (daysAhead === 3) label = "3 Days";
+      else if (daysAhead === 5) label = "5 Days";
+      else if (daysAhead === 7) label = "1 Week";
+      else if (daysAhead === 10) label = "10 Days";
+      else if (daysAhead === 14) label = "2 Weeks";
+      else if (daysAhead === 21) label = "3 Weeks";
+      else if (daysAhead === 30) label = "1 Month";
+      else if (daysAhead === 45) label = "1.5 Months";
+      else if (daysAhead === 60) label = "2 Months";
+      else if (daysAhead === 90) label = "3 Months";
+      else label = `${daysAhead}d`;
 
-      labels.push({ distance, label });
+      labels.push({ distance, label, daysAhead });
     }
   }
 

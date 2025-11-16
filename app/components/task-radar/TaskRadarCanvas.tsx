@@ -6,6 +6,7 @@ import { RadarCanvas } from "./RadarCanvas";
 import { TaskBlip } from "./TaskBlip";
 import { DependencyConnections } from "./DependencyConnections";
 import { CONSTANTS } from "./types";
+import { dateFromDistance } from "./utils";
 
 export function TaskRadarCanvas() {
   const {
@@ -147,12 +148,12 @@ export function TaskRadarCanvas() {
       const dy = mouseY - viewport.centerY;
       const distance = Math.sqrt(dx * dx + dy * dy);
 
-      // Convert distance to days (same calculation as ring labels)
+      // Convert distance to fractional days
       const unscaledDistance = distance / zoom;
-      const days = unscaledDistance / CONSTANTS.BASE_RING_SPACING;
+      const fractionalDays = unscaledDistance / CONSTANTS.BASE_RING_SPACING;
 
-      // Calculate the date
-      const date = new Date(currentTime.getTime() + days * 24 * 60 * 60 * 1000);
+      // Calculate the calendar date this distance represents
+      const date = dateFromDistance(currentTime, fractionalDays);
 
       setCursorDate(date);
       setCursorPos({ x: e.clientX, y: e.clientY });
@@ -214,9 +215,6 @@ export function TaskRadarCanvas() {
                 month: "short",
                 day: "numeric",
                 year: cursorDate.getFullYear() !== new Date().getFullYear() ? "numeric" : undefined,
-                hour: "numeric",
-                minute: "2-digit",
-                hour12: true,
               })}
             </div>
           </div>

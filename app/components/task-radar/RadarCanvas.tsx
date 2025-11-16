@@ -3,7 +3,7 @@
 import React from "react";
 import { useTaskRadar } from "./TaskRadarContext";
 import { CONSTANTS } from "./types";
-import { generateRingLabels } from "./utils";
+import { generateRingLabels, daysUntilCalendarDay } from "./utils";
 
 export function RadarCanvas() {
   const { viewport, zoom, panOffset, currentTime } = useTaskRadar();
@@ -16,15 +16,14 @@ export function RadarCanvas() {
   // Calculate maximum radius based on viewport
   const maxRadius = Math.max(viewport.width, viewport.height) * 1.5;
 
-  // Generate ring labels
-  const ringLabels = generateRingLabels(maxRadius, zoom);
+  // Generate ring labels (date-based)
+  const ringLabels = generateRingLabels(maxRadius, zoom, currentTime);
 
-  // Extract which days have labels for emphasizing those rings
-  const labeledDays = new Set(ringLabels.map(({ distance }) =>
-    Math.round(distance / (CONSTANTS.BASE_RING_SPACING * zoom))
-  ));
+  // Extract which days ahead have labels for emphasizing those rings
+  const labeledDaysAhead = new Set(ringLabels.map(({ daysAhead }) => daysAhead));
 
   // Generate rings (more than labels for visual continuity)
+  // Using date-based positioning: each ring represents a calendar day boundary
   const maxDays = Math.ceil(maxRadius / (CONSTANTS.BASE_RING_SPACING * zoom));
   const rings = Array.from({ length: maxDays }, (_, i) => i + 1);
 
@@ -108,18 +107,20 @@ export function RadarCanvas() {
 
       {/* Concentric rings */}
       <g>
-        {rings.map((day) => {
-          const radius = day * CONSTANTS.BASE_RING_SPACING * zoom;
+        {rings.map((daysAhead) => {
+          // Calculate fractional days until this calendar day boundary
+          const fractionalDays = daysUntilCalendarDay(currentTime, daysAhead);
+          const radius = fractionalDays * CONSTANTS.BASE_RING_SPACING * zoom;
           if (radius > maxRadius) return null;
 
           // Emphasize rings that have labels (adaptive based on zoom)
-          const isLabeled = labeledDays.has(day);
+          const isLabeled = labeledDaysAhead.has(daysAhead);
           const strokeWidth = isLabeled ? 1.5 : 0.5;
           const strokeOpacity = isLabeled ? 0.4 : 0.2;
 
           return (
             <circle
-              key={`ring-${day}`}
+              key={`ring-${daysAhead}`}
               cx={viewport.centerX}
               cy={viewport.centerY}
               r={radius}
