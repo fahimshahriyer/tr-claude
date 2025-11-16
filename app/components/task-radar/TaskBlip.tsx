@@ -122,6 +122,7 @@ export function TaskBlip({ task }: TaskBlipProps) {
     <>
       <div
         ref={blipRef}
+        data-task-blip
         className={`absolute animate-fade-in select-none ${
           isConnectingDependency
             ? canConnectTo

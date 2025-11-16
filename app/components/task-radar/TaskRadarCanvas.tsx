@@ -131,8 +131,9 @@ export function TaskRadarCanvas() {
         return;
       }
 
-      // Only show tooltip when hovering over the container background (not tasks or other elements)
-      if (e.target !== containerRef.current) {
+      // Hide tooltip when hovering over tasks (check if target has task-related classes or is inside a task)
+      const target = e.target as HTMLElement;
+      if (target.closest('[data-task-blip]')) {
         setCursorDate(null);
         return;
       }
