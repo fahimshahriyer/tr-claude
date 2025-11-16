@@ -32,7 +32,7 @@ interface TaskRadarContextValue extends RadarState {
   // Dependencies
   toggleDependencyMode: () => void;
   startConnectingDependency: (taskId: string) => void;
-  startConnectingFromPort: (taskId: string, port: ConnectionPort) => void;
+  startConnectingFromPort: (taskId: string, port: ConnectionPort, mouseX?: number, mouseY?: number) => void;
   finishConnectingDependency: (toTaskId: string, toPort?: ConnectionPort) => void;
   cancelConnectingDependency: () => void;
   removeDependency: (taskId: string, dependencyId: string) => void;
@@ -350,10 +350,15 @@ export function TaskRadarProvider({ children }: { children: React.ReactNode }) {
     setConnectingFromTaskId(taskId);
   }, []);
 
-  const startConnectingFromPort = useCallback((taskId: string, port: ConnectionPort) => {
+  const startConnectingFromPort = useCallback((taskId: string, port: ConnectionPort, mouseX?: number, mouseY?: number) => {
     setIsConnectingDependency(true);
     setConnectingFromTaskId(taskId);
     setConnectingFromPort(port);
+    // Initialize mouse position if provided
+    if (mouseX !== undefined && mouseY !== undefined) {
+      setConnectingMouseX(mouseX);
+      setConnectingMouseY(mouseY);
+    }
   }, []);
 
   const finishConnectingDependency = useCallback(

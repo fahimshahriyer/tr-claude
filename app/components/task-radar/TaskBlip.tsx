@@ -24,6 +24,8 @@ export function TaskBlip({ task }: TaskBlipProps) {
     finishConnectingDependency,
     startConnectingFromPort,
     showDependencies,
+    viewport,
+    panOffset,
   } = useTaskRadar();
 
   const blipRef = useRef<HTMLDivElement>(null);
@@ -37,9 +39,24 @@ export function TaskBlip({ task }: TaskBlipProps) {
   const handleStartConnect = useCallback(
     (taskId: string, port: PortType, e: React.MouseEvent) => {
       e.stopPropagation();
+
+      // Convert mouse coordinates to radar coordinate system
+      // Get the event target's bounding rect to calculate relative position
+      if (blipRef.current) {
+        const containerElement = blipRef.current.parentElement?.parentElement; // Get to the radar canvas container
+        if (containerElement) {
+          const rect = containerElement.getBoundingClientRect();
+          const radarX = e.clientX - rect.left - panOffset.x;
+          const radarY = e.clientY - rect.top - panOffset.y;
+          startConnectingFromPort(taskId, port, radarX, radarY);
+          return;
+        }
+      }
+
+      // Fallback if we can't calculate coordinates
       startConnectingFromPort(taskId, port);
     },
-    [startConnectingFromPort]
+    [startConnectingFromPort, panOffset]
   );
 
   const handleFinishConnect = useCallback(
