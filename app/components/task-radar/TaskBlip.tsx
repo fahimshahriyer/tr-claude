@@ -246,37 +246,37 @@ export function TaskBlip({ task }: TaskBlipProps) {
             </>
           )}
         </div>
-      </div>
 
-      {/* Tooltip showing "TO -> From" */}
-      {isHovered && !isDraggingThis && !isConnectingDependency && (
-        <div
-          className="absolute z-[100] pointer-events-none left-1/2 -translate-x-1/2"
-          style={{
-            top: `${CONSTANTS.TASK_BLIP_HEIGHT + 8}px`,
-          }}
-        >
-          <div className="bg-gray-900/95 border border-gray-700 rounded-md px-2 py-1 shadow-lg backdrop-blur-sm">
-            <div className="text-xs text-gray-300 font-medium whitespace-nowrap">
-              {task.dueDate.toLocaleDateString("en-US", {
-                month: "short",
-                day: "numeric",
-                hour: "numeric",
-                minute: "2-digit",
-                hour12: true,
-              })}
-              <span className="text-gray-500 mx-1.5">→</span>
-              {currentTime.toLocaleDateString("en-US", {
-                month: "short",
-                day: "numeric",
-                hour: "numeric",
-                minute: "2-digit",
-                hour12: true,
-              })}
+        {/* Tooltip showing "TO -> From" */}
+        {isHovered && !isDraggingThis && !isConnectingDependency && (
+          <div
+            className="absolute z-[100] pointer-events-none left-1/2 -translate-x-1/2"
+            style={{
+              top: `${CONSTANTS.TASK_BLIP_HEIGHT + 8}px`,
+            }}
+          >
+            <div className="bg-gray-900/95 border border-gray-700 rounded-md px-2 py-1 shadow-lg backdrop-blur-sm">
+              <div className="text-xs text-gray-300 font-medium whitespace-nowrap">
+                {task.dueDate.toLocaleDateString("en-US", {
+                  month: "short",
+                  day: "numeric",
+                  hour: "numeric",
+                  minute: "2-digit",
+                  hour12: true,
+                })}
+                <span className="text-gray-500 mx-1.5">→</span>
+                {currentTime.toLocaleDateString("en-US", {
+                  month: "short",
+                  day: "numeric",
+                  hour: "numeric",
+                  minute: "2-digit",
+                  hour12: true,
+                })}
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </>
   );
 }
