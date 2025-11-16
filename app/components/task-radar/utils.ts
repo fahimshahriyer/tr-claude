@@ -228,22 +228,38 @@ export function formatDetailedTimeRemaining(daysRemaining: number): string {
 }
 
 /**
- * Generate ring labels based on viewport and zoom
+ * Generate ring labels based on viewport and zoom (adaptive like Google Maps)
  */
 export function generateRingLabels(maxRadius: number, zoom: number): Array<{ distance: number; label: string }> {
   const labels: Array<{ distance: number; label: string }> = [];
 
-  for (const days of CONSTANTS.RING_LABEL_INTERVALS) {
+  // Adaptive intervals based on zoom level (like Google Maps)
+  let intervals: number[];
+  if (zoom < 0.6) {
+    // Zoomed out - show major intervals only
+    intervals = [7, 14, 30, 60, 90];
+  } else if (zoom < 1.2) {
+    // Medium zoom - show more detail
+    intervals = [1, 3, 7, 14, 21, 30, 60, 90];
+  } else {
+    // Zoomed in - show fine detail
+    intervals = [1, 2, 3, 5, 7, 10, 14, 21, 30, 45, 60, 90];
+  }
+
+  for (const days of intervals) {
     const distance = days * CONSTANTS.BASE_RING_SPACING * zoom;
     if (distance <= maxRadius) {
       let label: string;
       if (days === 1) label = "Tomorrow";
+      else if (days === 2) label = "2 Days";
       else if (days === 3) label = "3 Days";
       else if (days === 5) label = "5 Days";
       else if (days === 7) label = "1 Week";
+      else if (days === 10) label = "10 Days";
       else if (days === 14) label = "2 Weeks";
       else if (days === 21) label = "3 Weeks";
       else if (days === 30) label = "1 Month";
+      else if (days === 45) label = "1.5 Months";
       else if (days === 60) label = "2 Months";
       else if (days === 90) label = "3 Months";
       else label = `${days}d`;

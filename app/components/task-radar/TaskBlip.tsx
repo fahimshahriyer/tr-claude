@@ -123,8 +123,6 @@ export function TaskBlip({ task }: TaskBlipProps) {
       <div
         ref={blipRef}
         className={`absolute animate-fade-in select-none ${
-          isDraggingThis ? "" : "transition-all duration-300"
-        } ${
           isConnectingDependency
             ? canConnectTo
               ? "cursor-crosshair z-40"
@@ -142,7 +140,7 @@ export function TaskBlip({ task }: TaskBlipProps) {
         onMouseLeave={() => setIsHovered(false)}
       >
         <div
-          className={`rounded-lg backdrop-blur-sm border transition-all ${
+          className={`rounded-lg backdrop-blur-sm border transition-colors ${
             isConnectingFrom
               ? "bg-blue-900/90 border-blue-500 shadow-lg shadow-blue-500/30 animate-pulse"
               : canConnectTo
