@@ -1,8 +1,8 @@
 "use client";
 
 import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from "react";
-import { RadarState, Task, TaskPosition, DragState, ViewportDimensions, CONSTANTS, ConnectionPort, Priority } from "./types";
-import { calculateTaskPosition, calculateDueDateFromPosition, clamp, generateSampleTasks } from "./utils";
+import { RadarState, Task, TaskPosition, DragState, ViewportDimensions, CONSTANTS, ConnectionPort, Priority, TaskRadarOptions, TaskRadarCallbacks, TaskStatus } from "./types";
+import { calculateTaskPosition, calculateDueDateFromPosition, clamp } from "./utils";
 
 interface TaskRadarContextValue extends RadarState {
   // Viewport
@@ -71,7 +71,27 @@ export function useTaskRadar() {
   return context;
 }
 
-export function TaskRadarProvider({ children }: { children: React.ReactNode }) {
+interface TaskRadarProviderProps {
+  children: React.ReactNode;
+  tasks: Task[];
+  options?: TaskRadarOptions;
+  callbacks?: TaskRadarCallbacks;
+}
+
+export function TaskRadarProvider({
+  children,
+  tasks: externalTasks,
+  options = {},
+  callbacks = {}
+}: TaskRadarProviderProps) {
+  // Extract options with defaults
+  const {
+    theme: initialTheme = "dark",
+    showDependencies: initialShowDependencies = false,
+    initialZoom = 1.0,
+    centerLocked = true,
+  } = options;
+
   // Viewport state
   const [viewport, setViewport] = useState<ViewportDimensions>({
     width: 0,
@@ -80,17 +100,16 @@ export function TaskRadarProvider({ children }: { children: React.ReactNode }) {
     centerY: 0,
   });
 
-  // Radar state
-  const [zoom, setZoomState] = useState(1.0);
+  // Radar state - UI only
+  const [zoom, setZoomState] = useState(initialZoom);
   const [panOffset, setPanOffsetState] = useState({ x: 0, y: 0 });
-  const [centerLockEnabled, setCenterLockEnabled] = useState(true);
+  const [centerLockEnabled, setCenterLockEnabled] = useState(centerLocked);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [showingTaskDetailsId, setShowingTaskDetailsId] = useState<string | null>(null);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [timeOffset, setTimeOffsetState] = useState(0);
-  const [tasks, setTasks] = useState<Task[]>([]);
   const [taskPositions, setTaskPositions] = useState<Map<string, TaskPosition>>(new Map());
-  const [showDependencies, setShowDependencies] = useState(false);
+  const [showDependencies, setShowDependencies] = useState(initialShowDependencies);
   const [isConnectingDependency, setIsConnectingDependency] = useState(false);
   const [connectingFromTaskId, setConnectingFromTaskId] = useState<string | null>(null);
   const [connectingFromPort, setConnectingFromPort] = useState<ConnectionPort | null>(null);
@@ -100,7 +119,10 @@ export function TaskRadarProvider({ children }: { children: React.ReactNode }) {
   const [filterPriority, setFilterPriority] = useState<Priority | "all">("all");
   const [filterStatus, setFilterStatus] = useState<TaskStatus | "all">("all");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [theme, setTheme] = useState<"dark" | "light">("dark");
+  const [theme, setTheme] = useState<"dark" | "light">(initialTheme);
+
+  // Use external tasks (controlled)
+  const tasks = externalTasks;
 
   // Drag state
   const [dragState, setDragState] = useState<DragState>({
@@ -115,38 +137,6 @@ export function TaskRadarProvider({ children }: { children: React.ReactNode }) {
 
   // Ref for time interval
   const timeIntervalRef = useRef<NodeJS.Timeout | null>(null);
-
-  // Initialize with tasks from localStorage or sample tasks
-  useEffect(() => {
-    const savedTasks = localStorage.getItem("taskRadarTasks");
-    if (savedTasks) {
-      try {
-        const parsed = JSON.parse(savedTasks);
-        // Convert date strings back to Date objects
-        const tasksWithDates = parsed.map((task: Task) => ({
-          ...task,
-          dueDate: new Date(task.dueDate),
-          createdAt: task.createdAt ? new Date(task.createdAt) : undefined,
-          completedAt: task.completedAt ? new Date(task.completedAt) : undefined,
-        }));
-        setTasks(tasksWithDates);
-      } catch (e) {
-        console.error("Failed to parse saved tasks", e);
-        const sampleTasks = generateSampleTasks();
-        setTasks(sampleTasks);
-      }
-    } else {
-      const sampleTasks = generateSampleTasks();
-      setTasks(sampleTasks);
-    }
-  }, []);
-
-  // Save tasks to localStorage whenever they change
-  useEffect(() => {
-    if (tasks.length > 0) {
-      localStorage.setItem("taskRadarTasks", JSON.stringify(tasks));
-    }
-  }, [tasks]);
 
   // Update task positions when tasks, zoom, viewport, or time changes
   useEffect(() => {
@@ -185,34 +175,34 @@ export function TaskRadarProvider({ children }: { children: React.ReactNode }) {
     };
   }, [updateCurrentTime]);
 
-  // Actions
+  // Actions - call callbacks (controlled component pattern)
   const addTask = useCallback((task: Task) => {
+    // Generate task with ID if not provided
     const newTask = {
       ...task,
       id: task.id || `task-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       createdAt: task.createdAt || new Date(),
     };
-    setTasks((prev) => [...prev, newTask]);
-  }, []);
+    // Call callback to let parent handle the state
+    callbacks.onTaskCreate?.(newTask);
+  }, [callbacks]);
 
   const updateTask = useCallback((taskId: string, updates: Partial<Task>) => {
-    setTasks((prev) => prev.map((task) => (task.id === taskId ? { ...task, ...updates } : task)));
-  }, []);
+    // Call callback to let parent handle the state
+    callbacks.onTaskUpdate?.(taskId, updates);
+  }, [callbacks]);
 
   const deleteTask = useCallback((taskId: string) => {
-    setTasks((prev) => prev.filter((task) => task.id !== taskId));
-    setTaskPositions((prev) => {
-      const newPositions = new Map(prev);
-      newPositions.delete(taskId);
-      return newPositions;
-    });
+    // Clear UI state for deleted task
     if (selectedTaskId === taskId) {
       setSelectedTaskId(null);
     }
     if (showingTaskDetailsId === taskId) {
       setShowingTaskDetailsId(null);
     }
-  }, [selectedTaskId, showingTaskDetailsId]);
+    // Call callback to let parent handle the state
+    callbacks.onTaskDelete?.(taskId);
+  }, [selectedTaskId, showingTaskDetailsId, callbacks]);
 
   const selectTask = useCallback((taskId: string | null) => {
     setSelectedTaskId(taskId);
@@ -400,29 +390,29 @@ export function TaskRadarProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      // Add port-based connection
-      setTasks((prev) =>
-        prev.map((task) => {
-          if (task.id === toTaskId) {
-            const newConnection = {
-              fromTaskId: connectingFromTaskId,
-              fromPort: connectingFromPort || "right",
-              toTaskId: toTaskId,
-              toPort: toPort || "left",
-            };
-            return {
-              ...task,
-              dependencies: [...(task.dependencies || []), connectingFromTaskId],
-              connections: [...(task.connections || []), newConnection],
-            };
-          }
-          return task;
-        })
-      );
+      // Create port-based connection
+      const newConnection = {
+        fromTaskId: connectingFromTaskId,
+        fromPort: connectingFromPort || ("right" as ConnectionPort),
+        toTaskId: toTaskId,
+        toPort: toPort || ("left" as ConnectionPort),
+      };
+
+      // Call callback to let parent handle adding connection
+      callbacks.onConnectionCreate?.(newConnection);
+
+      // Also update the task to add the dependency
+      const task = tasks.find((t) => t.id === toTaskId);
+      if (task) {
+        callbacks.onTaskUpdate?.(toTaskId, {
+          dependencies: [...(task.dependencies || []), connectingFromTaskId],
+          connections: [...(task.connections || []), newConnection],
+        });
+      }
 
       cancelConnectingDependency();
     },
-    [connectingFromTaskId, connectingFromPort, tasks]
+    [connectingFromTaskId, connectingFromPort, tasks, callbacks]
   );
 
   const cancelConnectingDependency = useCallback(() => {
@@ -439,17 +429,25 @@ export function TaskRadarProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const removeDependency = useCallback((taskId: string, dependencyId: string) => {
-    setTasks((prev) =>
-      prev.map((task) =>
-        task.id === taskId
-          ? {
-              ...task,
-              dependencies: task.dependencies?.filter((id) => id !== dependencyId),
-            }
-          : task
-      )
-    );
-  }, []);
+    const task = tasks.find((t) => t.id === taskId);
+    if (task) {
+      const connection = task.connections?.find(
+        (c) => c.fromTaskId === dependencyId && c.toTaskId === taskId
+      );
+
+      // Call callbacks to let parent handle the state
+      if (connection) {
+        callbacks.onConnectionRemove?.(connection);
+      }
+
+      callbacks.onTaskUpdate?.(taskId, {
+        dependencies: task.dependencies?.filter((id) => id !== dependencyId),
+        connections: task.connections?.filter(
+          (c) => !(c.fromTaskId === dependencyId && c.toTaskId === taskId)
+        ),
+      });
+    }
+  }, [tasks, callbacks]);
 
   // Filter methods
   const getFilteredTasks = useCallback((): Task[] => {
@@ -487,18 +485,19 @@ export function TaskRadarProvider({ children }: { children: React.ReactNode }) {
         createdAt: task.createdAt ? new Date(task.createdAt) : undefined,
         completedAt: task.completedAt ? new Date(task.completedAt) : undefined,
       }));
-      setTasks(tasksWithDates);
+      // Call callback to let parent handle the state
+      callbacks.onTasksImport?.(tasksWithDates);
     } catch (e) {
       alert("Failed to import tasks. Invalid JSON format.");
     }
-  }, []);
+  }, [callbacks]);
 
   const clearAllTasks = useCallback(() => {
     if (confirm("Are you sure you want to delete all tasks? This cannot be undone.")) {
-      setTasks([]);
-      localStorage.removeItem("taskRadarTasks");
+      // Call callback to let parent handle the state
+      callbacks.onTasksClear?.();
     }
-  }, []);
+  }, [callbacks]);
 
   const toggleSidebar = useCallback(() => {
     setSidebarCollapsed((prev) => !prev);

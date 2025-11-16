@@ -5,7 +5,7 @@ import { TaskRadarProvider, useTaskRadar } from "./TaskRadarContext";
 import { TaskRadarCanvas } from "./TaskRadarCanvas";
 import { EnhancedControls } from "./EnhancedControls";
 import { TaskSidebar } from "./TaskSidebar";
-import { CONSTANTS } from "./types";
+import { CONSTANTS, TaskRadarProps } from "./types";
 
 function TaskRadarContent() {
   const { setZoom, zoom, theme } = useTaskRadar();
@@ -50,10 +50,32 @@ function TaskRadarContent() {
   );
 }
 
-export function TaskRadar() {
+/**
+ * TaskRadar - A visual task management component with temporal positioning
+ *
+ * @example
+ * ```tsx
+ * <TaskRadar
+ *   tasks={tasks}
+ *   options={{
+ *     theme: 'dark',
+ *     showDependencies: true,
+ *     showSidebar: true
+ *   }}
+ *   callbacks={{
+ *     onTaskCreate: (task) => handleCreate(task),
+ *     onTaskUpdate: (id, updates) => handleUpdate(id, updates),
+ *     onTaskDelete: (id) => handleDelete(id)
+ *   }}
+ * />
+ * ```
+ */
+export function TaskRadar({ tasks, options, callbacks, className }: TaskRadarProps) {
   return (
-    <TaskRadarProvider>
-      <TaskRadarContent />
+    <TaskRadarProvider tasks={tasks} options={options} callbacks={callbacks}>
+      <div className={className}>
+        <TaskRadarContent />
+      </div>
     </TaskRadarProvider>
   );
 }

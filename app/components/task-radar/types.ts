@@ -99,3 +99,54 @@ export const TIME_COLORS = {
   soon: "#71717a", // zinc-500 - medium grey (<7 days)
   later: "#a1a1aa", // zinc-400 - light grey (>7 days)
 } as const;
+
+// ============================================
+// TaskRadar Component Props & Options
+// ============================================
+
+export interface TaskRadarOptions {
+  /** Theme mode */
+  theme?: "dark" | "light";
+  /** Show dependencies by default */
+  showDependencies?: boolean;
+  /** Enable filters panel */
+  enableFilters?: boolean;
+  /** Enable time travel feature */
+  enableTimeTravel?: boolean;
+  /** Enable export/import */
+  enableDataManagement?: boolean;
+  /** Show sidebar */
+  showSidebar?: boolean;
+  /** Initial zoom level (0.3 - 2.0) */
+  initialZoom?: number;
+  /** Lock center by default */
+  centerLocked?: boolean;
+}
+
+export interface TaskRadarCallbacks {
+  /** Called when a task is created */
+  onTaskCreate?: (task: Omit<Task, "id" | "createdAt">) => void;
+  /** Called when a task is updated */
+  onTaskUpdate?: (taskId: string, updates: Partial<Task>) => void;
+  /** Called when a task is deleted */
+  onTaskDelete?: (taskId: string) => void;
+  /** Called when tasks are imported */
+  onTasksImport?: (tasks: Task[]) => void;
+  /** Called when all tasks are cleared */
+  onTasksClear?: () => void;
+  /** Called when a connection is created */
+  onConnectionCreate?: (connection: TaskConnection) => void;
+  /** Called when a connection is removed */
+  onConnectionRemove?: (connection: TaskConnection) => void;
+}
+
+export interface TaskRadarProps {
+  /** Array of tasks to display */
+  tasks: Task[];
+  /** Configuration options */
+  options?: TaskRadarOptions;
+  /** Event callbacks */
+  callbacks?: TaskRadarCallbacks;
+  /** Custom class name for container */
+  className?: string;
+}
