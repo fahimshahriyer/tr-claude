@@ -19,6 +19,11 @@ export function RadarCanvas() {
   // Generate ring labels
   const ringLabels = generateRingLabels(maxRadius, zoom);
 
+  // Extract which days have labels for emphasizing those rings
+  const labeledDays = new Set(ringLabels.map(({ distance }) =>
+    Math.round(distance / (CONSTANTS.BASE_RING_SPACING * zoom))
+  ));
+
   // Generate rings (more than labels for visual continuity)
   const maxDays = Math.ceil(maxRadius / (CONSTANTS.BASE_RING_SPACING * zoom));
   const rings = Array.from({ length: maxDays }, (_, i) => i + 1);
@@ -107,8 +112,8 @@ export function RadarCanvas() {
           const radius = day * CONSTANTS.BASE_RING_SPACING * zoom;
           if (radius > maxRadius) return null;
 
-          // Emphasize labeled rings
-          const isLabeled = CONSTANTS.RING_LABEL_INTERVALS.includes(day);
+          // Emphasize rings that have labels (adaptive based on zoom)
+          const isLabeled = labeledDays.has(day);
           const strokeWidth = isLabeled ? 1.5 : 0.5;
           const strokeOpacity = isLabeled ? 0.4 : 0.2;
 

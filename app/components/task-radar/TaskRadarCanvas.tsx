@@ -131,6 +131,12 @@ export function TaskRadarCanvas() {
         return;
       }
 
+      // Only show tooltip when hovering over the container background (not tasks or other elements)
+      if (e.target !== containerRef.current) {
+        setCursorDate(null);
+        return;
+      }
+
       const rect = containerRef.current.getBoundingClientRect();
       const mouseX = e.clientX - rect.left - panOffset.x;
       const mouseY = e.clientY - rect.top - panOffset.y;
@@ -140,7 +146,7 @@ export function TaskRadarCanvas() {
       const dy = mouseY - viewport.centerY;
       const distance = Math.sqrt(dx * dx + dy * dy);
 
-      // Convert distance to days
+      // Convert distance to days (same calculation as ring labels)
       const unscaledDistance = distance / zoom;
       const days = unscaledDistance / CONSTANTS.BASE_RING_SPACING;
 
