@@ -3,12 +3,12 @@
 import React, { useCallback, useEffect } from "react";
 import { TaskRadarProvider, useTaskRadar } from "./TaskRadarContext";
 import { TaskRadarCanvas } from "./TaskRadarCanvas";
-import { RadarControls } from "./RadarControls";
+import { EnhancedControls } from "./EnhancedControls";
 import { TaskDetails } from "./TaskDetails";
 import { CONSTANTS } from "./types";
 
 function TaskRadarContent() {
-  const { setZoom, zoom } = useTaskRadar();
+  const { setZoom, zoom, theme } = useTaskRadar();
 
   // Handle wheel zoom
   const handleWheel = useCallback(
@@ -33,10 +33,10 @@ function TaskRadarContent() {
   return (
     <div
       id="task-radar-container"
-      className="relative w-full h-screen"
+      className={`relative w-full h-screen ${theme === "dark" ? "bg-gray-950" : "bg-white"}`}
     >
       <TaskRadarCanvas />
-      <RadarControls />
+      <EnhancedControls />
       <TaskDetails />
     </div>
   );

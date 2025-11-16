@@ -4,10 +4,11 @@ import React, { useEffect, useRef, useCallback, useState } from "react";
 import { useTaskRadar } from "./TaskRadarContext";
 import { RadarCanvas } from "./RadarCanvas";
 import { TaskBlip } from "./TaskBlip";
+import { DependencyConnections } from "./DependencyConnections";
 
 export function TaskRadarCanvas() {
   const {
-    tasks,
+    getFilteredTasks,
     setViewport,
     dragState,
     updateDrag,
@@ -17,6 +18,8 @@ export function TaskRadarCanvas() {
     setPanOffset,
     selectTask,
   } = useTaskRadar();
+
+  const tasks = getFilteredTasks();
 
   const containerRef = useRef<HTMLDivElement>(null);
   const [isPanning, setIsPanning] = useState(false);
@@ -117,6 +120,9 @@ export function TaskRadarCanvas() {
     >
       {/* Radar background */}
       <RadarCanvas />
+
+      {/* Dependency connections */}
+      <DependencyConnections />
 
       {/* Task blips */}
       <div className="absolute inset-0">

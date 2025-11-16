@@ -6,7 +6,16 @@ import { PRIORITY_COLORS } from "./types";
 import { daysBetween, formatDueDate, formatDetailedTimeRemaining, getTimeColor } from "./utils";
 
 export function TaskDetails() {
-  const { selectedTaskId, tasks, selectTask, deleteTask, currentTime } = useTaskRadar();
+  const {
+    selectedTaskId,
+    tasks,
+    selectTask,
+    deleteTask,
+    currentTime,
+    startConnectingDependency,
+    removeDependency,
+    showDependencies,
+  } = useTaskRadar();
 
   const selectedTask = tasks.find((t) => t.id === selectedTaskId);
 
@@ -119,12 +128,103 @@ export function TaskDetails() {
             </div>
           )}
 
+          {/* Category */}
+          {selectedTask.category && (
+            <div className="space-y-2">
+              <span className="text-sm text-gray-400">Category</span>
+              <span className="inline-block px-3 py-1 rounded-full text-xs font-medium bg-gray-800 text-gray-300">
+                {selectedTask.category}
+              </span>
+            </div>
+          )}
+
+          {/* Dependencies */}
+          {showDependencies && (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-gray-400">Dependencies</span>
+                <button
+                  onClick={() => startConnectingDependency(selectedTask.id)}
+                  className="px-2 py-1 rounded text-xs bg-blue-900/30 hover:bg-blue-900/50 text-blue-400 transition-colors"
+                  title="Add dependency"
+                >
+                  + Add
+                </button>
+              </div>
+              {selectedTask.dependencies && selectedTask.dependencies.length > 0 ? (
+                <div className="space-y-1">
+                  {selectedTask.dependencies.map((depId) => {
+                    const depTask = tasks.find((t) => t.id === depId);
+                    if (!depTask) return null;
+                    return (
+                      <div
+                        key={depId}
+                        className="flex items-center justify-between px-2 py-1 bg-gray-800 rounded text-xs"
+                      >
+                        <span className="text-gray-300 truncate flex-1">{depTask.title}</span>
+                        <button
+                          onClick={() => removeDependency(selectedTask.id, depId)}
+                          className="ml-2 text-red-400 hover:text-red-300 transition-colors"
+                          title="Remove dependency"
+                        >
+                          <svg
+                            className="w-4 h-4"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M6 18L18 6M6 6l12 12"
+                            />
+                          </svg>
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <p className="text-xs text-gray-500 italic">No dependencies</p>
+              )}
+            </div>
+          )}
+
+          {/* Subtasks */}
+          {selectedTask.subtasks && selectedTask.subtasks.length > 0 && (
+            <div className="space-y-2">
+              <span className="text-sm text-gray-400">Subtasks</span>
+              <div className="space-y-1">
+                {selectedTask.subtasks.map((subtask) => (
+                  <div key={subtask.id} className="flex items-center gap-2 text-xs">
+                    <input
+                      type="checkbox"
+                      checked={subtask.completed}
+                      readOnly
+                      className="rounded"
+                    />
+                    <span className={subtask.completed ? "line-through text-gray-500" : "text-gray-300"}>
+                      {subtask.title}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Additional metadata */}
           <div className="pt-3 border-t border-gray-800 space-y-2 text-xs text-gray-500">
             {selectedTask.createdAt && (
               <div className="flex justify-between">
                 <span>Created</span>
                 <span>{selectedTask.createdAt.toLocaleDateString()}</span>
+              </div>
+            )}
+            {selectedTask.completedAt && (
+              <div className="flex justify-between">
+                <span>Completed</span>
+                <span>{selectedTask.completedAt.toLocaleDateString()}</span>
               </div>
             )}
             {selectedTask.estimatedHours && (
@@ -141,7 +241,7 @@ export function TaskDetails() {
             )}
             <div className="flex justify-between">
               <span>Task ID</span>
-              <span className="font-mono">{selectedTask.id}</span>
+              <span className="font-mono text-[10px]">{selectedTask.id.slice(0, 16)}...</span>
             </div>
           </div>
 
