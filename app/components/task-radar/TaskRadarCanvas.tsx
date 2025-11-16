@@ -54,8 +54,12 @@ export function TaskRadarCanvas() {
     (e: MouseEvent) => {
       if (dragState.isDragging) {
         updateDrag(e.clientX, e.clientY);
-      } else if (isConnectingDependency) {
-        updateConnectingMouse(e.clientX, e.clientY);
+      } else if (isConnectingDependency && containerRef.current) {
+        // Convert mouse coordinates to radar coordinate system
+        const rect = containerRef.current.getBoundingClientRect();
+        const x = e.clientX - rect.left - panOffset.x;
+        const y = e.clientY - rect.top - panOffset.y;
+        updateConnectingMouse(x, y);
       } else if (isPanning && !centerLockEnabled) {
         const dx = e.clientX - panStart.x;
         const dy = e.clientY - panStart.y;

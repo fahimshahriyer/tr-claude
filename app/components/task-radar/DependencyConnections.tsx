@@ -257,14 +257,40 @@ export function DependencyConnections() {
             const fromPos = getPortPosition(connectingFromTaskId, connectingFromPort);
             if (!fromPos) return null;
 
+            // Calculate control point for bezier curve based on from port direction
+            const dx = connectingMouseX - fromPos.x;
+            const dy = connectingMouseY - fromPos.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            const controlDist = Math.min(distance * 0.4, 150);
+
+            let cp1x = fromPos.x;
+            let cp1y = fromPos.y;
+
+            // First control point (from port direction)
+            switch (connectingFromPort) {
+              case "top":
+                cp1y = fromPos.y - controlDist;
+                break;
+              case "right":
+                cp1x = fromPos.x + controlDist;
+                break;
+              case "bottom":
+                cp1y = fromPos.y + controlDist;
+                break;
+              case "left":
+                cp1x = fromPos.x - controlDist;
+                break;
+            }
+
+            // Create a smooth curve toward the mouse
+            const curvePath = `M ${fromPos.x} ${fromPos.y} Q ${cp1x} ${cp1y}, ${connectingMouseX} ${connectingMouseY}`;
+
             return (
-              <line
-                x1={fromPos.x}
-                y1={fromPos.y}
-                x2={connectingMouseX}
-                y2={connectingMouseY}
+              <path
+                d={curvePath}
                 stroke="#10b981"
                 strokeWidth="2"
+                fill="none"
                 strokeDasharray="5 5"
                 opacity="0.6"
               >
@@ -275,7 +301,7 @@ export function DependencyConnections() {
                   dur="0.5s"
                   repeatCount="indefinite"
                 />
-              </line>
+              </path>
             );
           })()}
         </g>
