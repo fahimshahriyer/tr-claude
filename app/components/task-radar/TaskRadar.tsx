@@ -10,11 +10,14 @@ import { CONSTANTS } from "./types";
 function TaskRadarContent() {
   const { setZoom, zoom, theme } = useTaskRadar();
 
-  // Handle wheel zoom
+  // Handle wheel zoom with slower sensitivity
   const handleWheel = useCallback(
     (e: WheelEvent) => {
       e.preventDefault();
-      const delta = e.deltaY > 0 ? -CONSTANTS.ZOOM_STEP : CONSTANTS.ZOOM_STEP;
+      // Reduce sensitivity by scaling down deltaY
+      // Typical mouse wheel: ~100, trackpad: ~4-10 per event
+      const scaledDelta = e.deltaY / 500; // Slower zoom speed
+      const delta = -scaledDelta * CONSTANTS.ZOOM_STEP;
       setZoom(zoom + delta);
     },
     [zoom, setZoom]

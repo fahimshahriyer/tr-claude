@@ -79,7 +79,7 @@ export const CONSTANTS = {
   MAX_ZOOM: 2.0,
   ZOOM_STEP: 0.1,
   RADIAL_LINES: 12,
-  RING_LABEL_INTERVALS: [1, 7, 14, 30, 60, 90], // days
+  RING_LABEL_INTERVALS: [1, 3, 5, 7, 14, 21, 30, 60, 90], // days - added 3, 5, 21 for better granularity
   TASK_BLIP_WIDTH: 200,
   TASK_BLIP_HEIGHT: 80,
   CENTER_RADIUS: 40,

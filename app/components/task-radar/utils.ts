@@ -238,8 +238,11 @@ export function generateRingLabels(maxRadius: number, zoom: number): Array<{ dis
     if (distance <= maxRadius) {
       let label: string;
       if (days === 1) label = "Tomorrow";
+      else if (days === 3) label = "3 Days";
+      else if (days === 5) label = "5 Days";
       else if (days === 7) label = "1 Week";
       else if (days === 14) label = "2 Weeks";
+      else if (days === 21) label = "3 Weeks";
       else if (days === 30) label = "1 Month";
       else if (days === 60) label = "2 Months";
       else if (days === 90) label = "3 Months";
