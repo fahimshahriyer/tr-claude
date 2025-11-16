@@ -79,7 +79,7 @@ export function TaskSidebar() {
     const detailedTime = formatTimeRemaining(daysRemaining);
 
     return (
-      <div className="fixed right-0 top-0 h-screen w-96 bg-gray-900/95 backdrop-blur-sm border-l border-gray-700 z-40 flex flex-col">
+      <div className="w-96 h-screen bg-gray-900/95 backdrop-blur-sm border-l border-gray-700 flex flex-col">
         {/* Header with Back Button */}
         <div className="flex items-center gap-3 p-4 border-b border-gray-800">
           <button
@@ -190,7 +190,7 @@ export function TaskSidebar() {
 
   // Task List Mode
   return (
-    <div className="fixed right-0 top-0 h-screen w-96 bg-gray-900/95 backdrop-blur-sm border-l border-gray-700 z-40 flex flex-col">
+    <div className="w-96 h-screen bg-gray-900/95 backdrop-blur-sm border-l border-gray-700 flex flex-col">
       {/* Date Range Navigation */}
       <div className="p-4 border-b border-gray-800">
         <div className="flex items-center justify-between gap-2">

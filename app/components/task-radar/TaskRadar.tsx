@@ -34,12 +34,17 @@ function TaskRadarContent() {
   }, [handleWheel]);
 
   return (
-    <div
-      id="task-radar-container"
-      className={`relative w-full h-screen ${theme === "dark" ? "bg-gray-950" : "bg-white"}`}
-    >
-      <TaskRadarCanvas />
-      <EnhancedControls />
+    <div className={`flex w-full h-screen ${theme === "dark" ? "bg-gray-950" : "bg-white"}`}>
+      {/* Radar Container */}
+      <div
+        id="task-radar-container"
+        className="relative flex-1"
+      >
+        <TaskRadarCanvas />
+        <EnhancedControls />
+      </div>
+
+      {/* Sidebar Container */}
       <TaskSidebar />
     </div>
   );
