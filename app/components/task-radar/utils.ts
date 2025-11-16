@@ -270,6 +270,7 @@ export function generateSampleTasks(): Task[] {
       createdAt: new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000),
       tags: ["finance", "urgent"],
       estimatedHours: 4,
+      dependencies: [], // No dependencies - this is a starting task
     },
     {
       id: "task-2",
@@ -281,6 +282,7 @@ export function generateSampleTasks(): Task[] {
       createdAt: new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000),
       tags: ["marketing", "website"],
       estimatedHours: 6,
+      dependencies: ["task-7"], // Depends on customer feedback analysis
     },
     {
       id: "task-3",
@@ -292,6 +294,7 @@ export function generateSampleTasks(): Task[] {
       createdAt: new Date(now.getTime() - 1 * 24 * 60 * 60 * 1000),
       tags: ["hr", "team"],
       estimatedHours: 3,
+      dependencies: ["task-8"], // Depends on onboarding new team members
     },
     {
       id: "task-4",
@@ -303,6 +306,7 @@ export function generateSampleTasks(): Task[] {
       createdAt: new Date(now.getTime() - 0.5 * 24 * 60 * 60 * 1000),
       tags: ["security", "urgent", "dev"],
       estimatedHours: 8,
+      dependencies: [], // No dependencies - critical urgent fix
     },
     {
       id: "task-5",
@@ -314,6 +318,7 @@ export function generateSampleTasks(): Task[] {
       createdAt: new Date(now.getTime() - 10 * 24 * 60 * 60 * 1000),
       tags: ["communications", "marketing"],
       estimatedHours: 2,
+      dependencies: ["task-1"], // Depends on financial report review
     },
     {
       id: "task-6",
@@ -325,6 +330,7 @@ export function generateSampleTasks(): Task[] {
       createdAt: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000),
       tags: ["infrastructure", "dev"],
       estimatedHours: 16,
+      dependencies: ["task-4"], // Depends on security bug fix
     },
     {
       id: "task-7",
@@ -336,6 +342,7 @@ export function generateSampleTasks(): Task[] {
       createdAt: new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000),
       tags: ["product", "research"],
       estimatedHours: 5,
+      dependencies: [], // No dependencies - independent research
     },
     {
       id: "task-8",
@@ -347,6 +354,7 @@ export function generateSampleTasks(): Task[] {
       createdAt: new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000),
       tags: ["hr", "onboarding"],
       estimatedHours: 4,
+      dependencies: [], // No dependencies - urgent HR task
     },
     {
       id: "task-9",
@@ -358,6 +366,7 @@ export function generateSampleTasks(): Task[] {
       createdAt: new Date(now.getTime() - 15 * 24 * 60 * 60 * 1000),
       tags: ["hr", "management"],
       estimatedHours: 20,
+      dependencies: ["task-3"], // Depends on team building event
     },
     {
       id: "task-10",
@@ -369,6 +378,7 @@ export function generateSampleTasks(): Task[] {
       createdAt: new Date(now.getTime() - 4 * 24 * 60 * 60 * 1000),
       tags: ["documentation", "dev"],
       estimatedHours: 8,
+      dependencies: ["task-6"], // Depends on database migration completion
     },
   ];
 }
