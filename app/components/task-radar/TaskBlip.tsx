@@ -15,6 +15,7 @@ export function TaskBlip({ task }: TaskBlipProps) {
     taskPositions,
     selectedTaskId,
     selectTask,
+    showTaskDetails,
     dragState,
     startDrag,
     currentTime,
@@ -102,10 +103,10 @@ export function TaskBlip({ task }: TaskBlipProps) {
 
       if (!isConnectingDependency && !isDraggingThis) {
         // Select and show details
-        selectTask(task.id);
+        showTaskDetails(task.id);
       }
     },
-    [selectTask, task.id, isConnectingDependency, isDraggingThis]
+    [showTaskDetails, task.id, isConnectingDependency, isDraggingThis]
   );
 
   // Early return after all hooks

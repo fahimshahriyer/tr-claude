@@ -15,11 +15,15 @@ interface TaskRadarContextValue extends RadarState {
   updateDrag: (x: number, y: number) => void;
   endDrag: () => void;
 
+  // Task details view
+  showingTaskDetailsId: string | null;
+
   // Actions
   addTask: (task: Task) => void;
   updateTask: (taskId: string, updates: Partial<Task>) => void;
   deleteTask: (taskId: string) => void;
   selectTask: (taskId: string | null) => void;
+  showTaskDetails: (taskId: string | null) => void;
   setZoom: (zoom: number) => void;
   setPanOffset: (offset: { x: number; y: number }) => void;
   toggleCenterLock: () => void;
@@ -81,6 +85,7 @@ export function TaskRadarProvider({ children }: { children: React.ReactNode }) {
   const [panOffset, setPanOffsetState] = useState({ x: 0, y: 0 });
   const [centerLockEnabled, setCenterLockEnabled] = useState(true);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
+  const [showingTaskDetailsId, setShowingTaskDetailsId] = useState<string | null>(null);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [timeOffset, setTimeOffsetState] = useState(0);
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -204,10 +209,18 @@ export function TaskRadarProvider({ children }: { children: React.ReactNode }) {
     if (selectedTaskId === taskId) {
       setSelectedTaskId(null);
     }
-  }, [selectedTaskId]);
+    if (showingTaskDetailsId === taskId) {
+      setShowingTaskDetailsId(null);
+    }
+  }, [selectedTaskId, showingTaskDetailsId]);
 
   const selectTask = useCallback((taskId: string | null) => {
     setSelectedTaskId(taskId);
+  }, []);
+
+  const showTaskDetails = useCallback((taskId: string | null) => {
+    setSelectedTaskId(taskId);
+    setShowingTaskDetailsId(taskId);
   }, []);
 
   const setZoom = useCallback(
@@ -497,6 +510,7 @@ export function TaskRadarProvider({ children }: { children: React.ReactNode }) {
     panOffset,
     centerLockEnabled,
     selectedTaskId,
+    showingTaskDetailsId,
     currentTime,
     timeOffset,
     tasks,
@@ -523,6 +537,7 @@ export function TaskRadarProvider({ children }: { children: React.ReactNode }) {
     updateTask,
     deleteTask,
     selectTask,
+    showTaskDetails,
     setZoom,
     setPanOffset,
     toggleCenterLock,

@@ -12,8 +12,8 @@ const DATE_RANGES: DateRange[] = ["Today", "Tomorrow", "This Week", "This Month"
 export function TaskSidebar() {
   const {
     tasks,
-    selectedTaskId,
-    selectTask,
+    showingTaskDetailsId,
+    showTaskDetails,
     currentTime,
     updateTask,
     deleteTask,
@@ -72,7 +72,7 @@ export function TaskSidebar() {
   };
 
   const filteredTasks = getTasksForDateRange();
-  const selectedTask = tasks.find((t) => t.id === selectedTaskId);
+  const taskToShowDetails = tasks.find((t) => t.id === showingTaskDetailsId);
 
   // Collapsed State
   if (sidebarCollapsed) {
@@ -92,8 +92,8 @@ export function TaskSidebar() {
   }
 
   // Task Details Mode
-  if (selectedTask) {
-    const daysRemaining = daysBetween(currentTime, selectedTask.dueDate);
+  if (taskToShowDetails) {
+    const daysRemaining = daysBetween(currentTime, taskToShowDetails.dueDate);
     const timeColor = getTimeColor(daysRemaining);
     const detailedTime = formatTimeRemaining(daysRemaining);
 
@@ -103,7 +103,7 @@ export function TaskSidebar() {
         <div className="flex items-center justify-between p-4 border-b border-gray-800">
           <div className="flex items-center gap-3">
             <button
-              onClick={() => selectTask(null)}
+              onClick={() => showTaskDetails(null)}
               className="text-gray-400 hover:text-white transition-colors"
               title="Back to list"
             >
@@ -130,12 +130,12 @@ export function TaskSidebar() {
           <div className="flex items-start gap-3">
             <div
               className="w-4 h-4 rounded-full mt-1 flex-shrink-0"
-              style={{ backgroundColor: PRIORITY_COLORS[selectedTask.priority] }}
+              style={{ backgroundColor: PRIORITY_COLORS[taskToShowDetails.priority] }}
             />
             <div className="flex-1 min-w-0">
-              <h3 className="text-xl font-semibold text-white break-words">{selectedTask.title}</h3>
+              <h3 className="text-xl font-semibold text-white break-words">{taskToShowDetails.title}</h3>
               <span className="inline-block mt-1 px-2 py-0.5 rounded text-xs font-medium bg-gray-800 text-gray-300 capitalize">
-                {selectedTask.priority} Priority
+                {taskToShowDetails.priority} Priority
               </span>
             </div>
           </div>
@@ -145,7 +145,7 @@ export function TaskSidebar() {
             <div className="flex items-center justify-between">
               <span className="text-sm text-gray-400">Due Date</span>
               <span className="text-sm text-white font-medium">
-                {selectedTask.dueDate.toLocaleDateString("en-US", {
+                {taskToShowDetails.dueDate.toLocaleDateString("en-US", {
                   month: "short",
                   day: "numeric",
                   year: "numeric",
@@ -163,31 +163,31 @@ export function TaskSidebar() {
           </div>
 
           {/* Description */}
-          {selectedTask.description && (
+          {taskToShowDetails.description && (
             <div className="space-y-2">
               <span className="text-sm font-medium text-gray-400">Description</span>
               <p className="text-sm text-gray-300 leading-relaxed bg-gray-800/30 rounded-lg p-3">
-                {selectedTask.description}
+                {taskToShowDetails.description}
               </p>
             </div>
           )}
 
           {/* Status */}
-          {selectedTask.status && (
+          {taskToShowDetails.status && (
             <div className="space-y-2">
               <span className="text-sm font-medium text-gray-400">Status</span>
               <span className="inline-block px-3 py-1 rounded-full text-xs font-medium bg-gray-800 text-zinc-400 capitalize">
-                {selectedTask.status}
+                {taskToShowDetails.status}
               </span>
             </div>
           )}
 
           {/* Tags */}
-          {selectedTask.tags && selectedTask.tags.length > 0 && (
+          {taskToShowDetails.tags && taskToShowDetails.tags.length > 0 && (
             <div className="space-y-2">
               <span className="text-sm font-medium text-gray-400">Tags</span>
               <div className="flex flex-wrap gap-2">
-                {selectedTask.tags.map((tag) => (
+                {taskToShowDetails.tags.map((tag) => (
                   <span
                     key={tag}
                     className="px-2 py-1 rounded text-xs font-medium bg-gray-800 text-gray-400"
@@ -205,8 +205,8 @@ export function TaskSidebar() {
           <button
             onClick={() => {
               if (confirm("Are you sure you want to delete this task?")) {
-                deleteTask(selectedTask.id);
-                selectTask(null);
+                deleteTask(taskToShowDetails.id);
+                showTaskDetails(null);
               }
             }}
             className="w-full px-4 py-2 bg-red-900/20 hover:bg-red-900/30 text-red-400 rounded-lg font-medium transition-colors"
@@ -315,7 +315,7 @@ export function TaskSidebar() {
             return (
               <button
                 key={task.id}
-                onClick={() => selectTask(task.id)}
+                onClick={() => showTaskDetails(task.id)}
                 className="w-full text-left p-3 bg-gray-800/50 hover:bg-gray-800 rounded-lg border border-gray-700 hover:border-gray-600 transition-all"
               >
                 <div className="flex items-start gap-3">
