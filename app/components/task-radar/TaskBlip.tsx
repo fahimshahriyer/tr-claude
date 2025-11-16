@@ -88,11 +88,24 @@ export function TaskBlip({ task }: TaskBlipProps) {
           finishConnectingDependency(task.id);
         }
       } else if (!isDraggingThis) {
-        // Normal selection
+        // Normal selection - only highlight, don't show details
         selectTask(isSelected ? null : task.id);
       }
     },
     [isDraggingThis, isSelected, selectTask, task.id, isConnectingDependency, canConnectTo, finishConnectingDependency]
+  );
+
+  // Handle double-click to show task details
+  const handleDoubleClick = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation();
+
+      if (!isConnectingDependency && !isDraggingThis) {
+        // Select and show details
+        selectTask(task.id);
+      }
+    },
+    [selectTask, task.id, isConnectingDependency, isDraggingThis]
   );
 
   // Early return after all hooks
@@ -137,6 +150,7 @@ export function TaskBlip({ task }: TaskBlipProps) {
         }}
         onMouseDown={handleMouseDown}
         onClick={handleClick}
+        onDoubleClick={handleDoubleClick}
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
       >

@@ -17,6 +17,8 @@ export function TaskSidebar() {
     currentTime,
     updateTask,
     deleteTask,
+    sidebarCollapsed,
+    toggleSidebar,
   } = useTaskRadar();
 
   const [dateRange, setDateRange] = useState<DateRange>("Today");
@@ -72,6 +74,23 @@ export function TaskSidebar() {
   const filteredTasks = getTasksForDateRange();
   const selectedTask = tasks.find((t) => t.id === selectedTaskId);
 
+  // Collapsed State
+  if (sidebarCollapsed) {
+    return (
+      <div className="w-12 h-screen bg-gray-900/95 backdrop-blur-sm border-l border-gray-700 flex flex-col items-center py-4">
+        <button
+          onClick={toggleSidebar}
+          className="p-2 hover:bg-gray-800 rounded-lg transition-colors text-gray-400 hover:text-white"
+          title="Expand sidebar"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
+        </button>
+      </div>
+    );
+  }
+
   // Task Details Mode
   if (selectedTask) {
     const daysRemaining = daysBetween(currentTime, selectedTask.dueDate);
@@ -81,17 +100,28 @@ export function TaskSidebar() {
     return (
       <div className="w-96 h-screen bg-gray-900/95 backdrop-blur-sm border-l border-gray-700 flex flex-col">
         {/* Header with Back Button */}
-        <div className="flex items-center gap-3 p-4 border-b border-gray-800">
+        <div className="flex items-center justify-between p-4 border-b border-gray-800">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => selectTask(null)}
+              className="text-gray-400 hover:text-white transition-colors"
+              title="Back to list"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+            </button>
+            <h2 className="text-lg font-semibold text-white">Task Details</h2>
+          </div>
           <button
-            onClick={() => selectTask(null)}
+            onClick={toggleSidebar}
             className="text-gray-400 hover:text-white transition-colors"
-            title="Back to list"
+            title="Collapse sidebar"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
             </svg>
           </button>
-          <h2 className="text-lg font-semibold text-white">Task Details</h2>
         </div>
 
         {/* Task Details Content */}
@@ -193,20 +223,21 @@ export function TaskSidebar() {
     <div className="w-96 h-screen bg-gray-900/95 backdrop-blur-sm border-l border-gray-700 flex flex-col">
       {/* Date Range Navigation */}
       <div className="p-4 border-b border-gray-800">
-        <div className="flex items-center justify-between gap-2">
-          {/* Previous Button */}
-          <button
-            onClick={() => navigateDateRange("prev")}
-            className="p-2 hover:bg-gray-800 rounded-lg transition-colors text-gray-400 hover:text-white"
-            title="Previous range"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
-          </button>
+        <div className="flex items-center justify-between gap-2 mb-3">
+          <div className="flex items-center gap-2 flex-1">
+            {/* Previous Button */}
+            <button
+              onClick={() => navigateDateRange("prev")}
+              className="p-2 hover:bg-gray-800 rounded-lg transition-colors text-gray-400 hover:text-white"
+              title="Previous range"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+            </button>
 
-          {/* Date Range Dropdown */}
-          <div className="relative flex-1">
+            {/* Date Range Dropdown */}
+            <div className="relative flex-1">
             <button
               onClick={() => setShowDropdown(!showDropdown)}
               className="w-full px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg text-white font-medium transition-colors flex items-center justify-between"
@@ -240,11 +271,23 @@ export function TaskSidebar() {
             )}
           </div>
 
-          {/* Next Button */}
+            {/* Next Button */}
+            <button
+              onClick={() => navigateDateRange("next")}
+              className="p-2 hover:bg-gray-800 rounded-lg transition-colors text-gray-400 hover:text-white"
+              title="Next range"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
+          </div>
+
+          {/* Collapse Button */}
           <button
-            onClick={() => navigateDateRange("next")}
+            onClick={toggleSidebar}
             className="p-2 hover:bg-gray-800 rounded-lg transition-colors text-gray-400 hover:text-white"
-            title="Next range"
+            title="Collapse sidebar"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />

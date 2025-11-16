@@ -44,6 +44,10 @@ interface TaskRadarContextValue extends RadarState {
   setFilterStatus: (status: TaskStatus | "all") => void;
   getFilteredTasks: () => Task[];
 
+  // Sidebar
+  sidebarCollapsed: boolean;
+  toggleSidebar: () => void;
+
   // Theme
   setTheme: (theme: "dark" | "light") => void;
 
@@ -90,6 +94,7 @@ export function TaskRadarProvider({ children }: { children: React.ReactNode }) {
   const [filterQuery, setFilterQuery] = useState("");
   const [filterPriority, setFilterPriority] = useState<Priority | "all">("all");
   const [filterStatus, setFilterStatus] = useState<TaskStatus | "all">("all");
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [theme, setTheme] = useState<"dark" | "light">("dark");
 
   // Drag state
@@ -482,6 +487,10 @@ export function TaskRadarProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  const toggleSidebar = useCallback(() => {
+    setSidebarCollapsed((prev) => !prev);
+  }, []);
+
   const value: TaskRadarContextValue = {
     // State
     zoom,
@@ -503,6 +512,7 @@ export function TaskRadarProvider({ children }: { children: React.ReactNode }) {
     filterQuery,
     filterPriority,
     filterStatus,
+    sidebarCollapsed,
     theme,
 
     // Setters
@@ -539,6 +549,9 @@ export function TaskRadarProvider({ children }: { children: React.ReactNode }) {
     setFilterPriority,
     setFilterStatus,
     getFilteredTasks,
+
+    // Sidebar
+    toggleSidebar,
 
     // Theme
     setTheme,
