@@ -122,7 +122,9 @@ export function TaskBlip({ task }: TaskBlipProps) {
     <>
       <div
         ref={blipRef}
-        className={`absolute transition-all duration-300 animate-fade-in select-none ${
+        className={`absolute animate-fade-in select-none ${
+          isDraggingThis ? "" : "transition-all duration-300"
+        } ${
           isConnectingDependency
             ? canConnectTo
               ? "cursor-crosshair z-40"
@@ -246,25 +248,32 @@ export function TaskBlip({ task }: TaskBlipProps) {
         </div>
       </div>
 
-      {/* Drag tooltip */}
-      {isDraggingThis && dragState.newDueDate && (
+      {/* Tooltip showing "TO -> From" */}
+      {isHovered && !isDraggingThis && !isConnectingDependency && (
         <div
-          className="absolute z-[100] pointer-events-none"
+          className="absolute z-[100] pointer-events-none left-1/2 -translate-x-1/2"
           style={{
-            left: `${dragState.currentX + 20}px`,
-            top: `${dragState.currentY - 40}px`,
+            top: `${CONSTANTS.TASK_BLIP_HEIGHT + 8}px`,
           }}
         >
-          <div className="bg-gray-900 border border-emerald-500 rounded-lg px-3 py-2 shadow-xl">
-            <div className="text-xs text-emerald-400 font-medium">
-              {dragState.newDueDate.toLocaleDateString("en-US", {
+          <div className="bg-gray-900/95 border border-gray-700 rounded-md px-2 py-1 shadow-lg backdrop-blur-sm">
+            <div className="text-xs text-gray-300 font-medium whitespace-nowrap">
+              {task.dueDate.toLocaleDateString("en-US", {
                 month: "short",
                 day: "numeric",
                 hour: "numeric",
                 minute: "2-digit",
+                hour12: true,
+              })}
+              <span className="text-gray-500 mx-1.5">→</span>
+              {currentTime.toLocaleDateString("en-US", {
+                month: "short",
+                day: "numeric",
+                hour: "numeric",
+                minute: "2-digit",
+                hour12: true,
               })}
             </div>
-            <div className="text-[10px] text-gray-400 mt-1">Release to confirm</div>
           </div>
         </div>
       )}
