@@ -2,8 +2,9 @@
 
 import React, { useRef, useCallback } from "react";
 import { useTaskRadar } from "./TaskRadarContext";
-import { Task, CONSTANTS, PRIORITY_COLORS } from "./types";
+import { Task, CONSTANTS, PRIORITY_COLORS, ConnectionPort as PortType } from "./types";
 import { daysBetween, formatTimeRemaining, getTimeColor } from "./utils";
+import { ConnectionPort } from "./ConnectionPort";
 
 interface TaskBlipProps {
   task: Task;
@@ -19,7 +20,10 @@ export function TaskBlip({ task }: TaskBlipProps) {
     currentTime,
     isConnectingDependency,
     connectingFromTaskId,
+    connectingFromPort,
     finishConnectingDependency,
+    startConnectingFromPort,
+    showDependencies,
   } = useTaskRadar();
 
   const blipRef = useRef<HTMLDivElement>(null);
@@ -27,6 +31,22 @@ export function TaskBlip({ task }: TaskBlipProps) {
   const isSelected = selectedTaskId === task.id;
   const isConnectingFrom = isConnectingDependency && connectingFromTaskId === task.id;
   const canConnectTo = isConnectingDependency && connectingFromTaskId !== task.id;
+
+  // Port connection handlers
+  const handleStartConnect = useCallback(
+    (taskId: string, port: PortType, e: React.MouseEvent) => {
+      e.stopPropagation();
+      startConnectingFromPort(taskId, port);
+    },
+    [startConnectingFromPort]
+  );
+
+  const handleFinishConnect = useCallback(
+    (taskId: string, port: PortType) => {
+      finishConnectingDependency(taskId, port);
+    },
+    [finishConnectingDependency]
+  );
 
   // Handle mouse down to start drag (only if not in dependency mode)
   const handleMouseDown = useCallback(
@@ -161,6 +181,44 @@ export function TaskBlip({ task }: TaskBlipProps) {
               )}
             </div>
           </div>
+
+          {/* Connection Ports - Only show when dependencies are enabled */}
+          {showDependencies && (
+            <>
+              <ConnectionPort
+                port="top"
+                taskId={task.id}
+                isConnecting={isConnectingDependency}
+                isSource={isConnectingFrom && connectingFromPort === "top"}
+                onStartConnect={handleStartConnect}
+                onFinishConnect={handleFinishConnect}
+              />
+              <ConnectionPort
+                port="right"
+                taskId={task.id}
+                isConnecting={isConnectingDependency}
+                isSource={isConnectingFrom && connectingFromPort === "right"}
+                onStartConnect={handleStartConnect}
+                onFinishConnect={handleFinishConnect}
+              />
+              <ConnectionPort
+                port="bottom"
+                taskId={task.id}
+                isConnecting={isConnectingDependency}
+                isSource={isConnectingFrom && connectingFromPort === "bottom"}
+                onStartConnect={handleStartConnect}
+                onFinishConnect={handleFinishConnect}
+              />
+              <ConnectionPort
+                port="left"
+                taskId={task.id}
+                isConnecting={isConnectingDependency}
+                isSource={isConnectingFrom && connectingFromPort === "left"}
+                onStartConnect={handleStartConnect}
+                onFinishConnect={handleFinishConnect}
+              />
+            </>
+          )}
         </div>
       </div>
 

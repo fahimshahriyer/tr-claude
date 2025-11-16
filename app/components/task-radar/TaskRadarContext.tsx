@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from "react";
-import { RadarState, Task, TaskPosition, DragState, ViewportDimensions, CONSTANTS } from "./types";
+import { RadarState, Task, TaskPosition, DragState, ViewportDimensions, CONSTANTS, ConnectionPort, Priority } from "./types";
 import { calculateTaskPosition, calculateDueDateFromPosition, clamp, generateSampleTasks } from "./utils";
 
 interface TaskRadarContextValue extends RadarState {
@@ -32,7 +32,8 @@ interface TaskRadarContextValue extends RadarState {
   // Dependencies
   toggleDependencyMode: () => void;
   startConnectingDependency: (taskId: string) => void;
-  finishConnectingDependency: (toTaskId: string) => void;
+  startConnectingFromPort: (taskId: string, port: ConnectionPort) => void;
+  finishConnectingDependency: (toTaskId: string, toPort?: ConnectionPort) => void;
   cancelConnectingDependency: () => void;
   removeDependency: (taskId: string, dependencyId: string) => void;
 
@@ -82,6 +83,7 @@ export function TaskRadarProvider({ children }: { children: React.ReactNode }) {
   const [showDependencies, setShowDependencies] = useState(false);
   const [isConnectingDependency, setIsConnectingDependency] = useState(false);
   const [connectingFromTaskId, setConnectingFromTaskId] = useState<string | null>(null);
+  const [connectingFromPort, setConnectingFromPort] = useState<ConnectionPort | null>(null);
   const [filterQuery, setFilterQuery] = useState("");
   const [filterPriority, setFilterPriority] = useState<Priority | "all">("all");
   const [filterStatus, setFilterStatus] = useState<TaskStatus | "all">("all");
@@ -345,8 +347,14 @@ export function TaskRadarProvider({ children }: { children: React.ReactNode }) {
     setConnectingFromTaskId(taskId);
   }, []);
 
+  const startConnectingFromPort = useCallback((taskId: string, port: ConnectionPort) => {
+    setIsConnectingDependency(true);
+    setConnectingFromTaskId(taskId);
+    setConnectingFromPort(port);
+  }, []);
+
   const finishConnectingDependency = useCallback(
-    (toTaskId: string) => {
+    (toTaskId: string, toPort?: ConnectionPort) => {
       if (!connectingFromTaskId || connectingFromTaskId === toTaskId) {
         cancelConnectingDependency();
         return;
@@ -366,26 +374,35 @@ export function TaskRadarProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      // Add dependency
+      // Add port-based connection
       setTasks((prev) =>
-        prev.map((task) =>
-          task.id === toTaskId
-            ? {
-                ...task,
-                dependencies: [...(task.dependencies || []), connectingFromTaskId],
-              }
-            : task
-        )
+        prev.map((task) => {
+          if (task.id === toTaskId) {
+            const newConnection = {
+              fromTaskId: connectingFromTaskId,
+              fromPort: connectingFromPort || "right",
+              toTaskId: toTaskId,
+              toPort: toPort || "left",
+            };
+            return {
+              ...task,
+              dependencies: [...(task.dependencies || []), connectingFromTaskId],
+              connections: [...(task.connections || []), newConnection],
+            };
+          }
+          return task;
+        })
       );
 
       cancelConnectingDependency();
     },
-    [connectingFromTaskId, tasks]
+    [connectingFromTaskId, connectingFromPort, tasks]
   );
 
   const cancelConnectingDependency = useCallback(() => {
     setIsConnectingDependency(false);
     setConnectingFromTaskId(null);
+    setConnectingFromPort(null);
   }, []);
 
   const removeDependency = useCallback((taskId: string, dependencyId: string) => {
@@ -465,6 +482,7 @@ export function TaskRadarProvider({ children }: { children: React.ReactNode }) {
     showDependencies,
     isConnectingDependency,
     connectingFromTaskId,
+    connectingFromPort,
     filterQuery,
     filterPriority,
     filterStatus,
@@ -493,6 +511,7 @@ export function TaskRadarProvider({ children }: { children: React.ReactNode }) {
     // Dependencies
     toggleDependencyMode,
     startConnectingDependency,
+    startConnectingFromPort,
     finishConnectingDependency,
     cancelConnectingDependency,
     removeDependency,

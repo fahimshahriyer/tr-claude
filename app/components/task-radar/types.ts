@@ -1,5 +1,13 @@
 export type Priority = "low" | "medium" | "high";
 export type TaskStatus = "todo" | "in-progress" | "done";
+export type ConnectionPort = "top" | "right" | "bottom" | "left";
+
+export interface TaskConnection {
+  fromTaskId: string;
+  fromPort: ConnectionPort;
+  toTaskId: string;
+  toPort: ConnectionPort;
+}
 
 export interface Task {
   id: string;
@@ -12,7 +20,8 @@ export interface Task {
   tags?: string[];
   assignee?: string;
   estimatedHours?: number;
-  dependencies?: string[]; // IDs of tasks this task depends on
+  dependencies?: string[]; // IDs of tasks this task depends on (legacy support)
+  connections?: TaskConnection[]; // New port-based connections
   completedAt?: Date;
   subtasks?: { id: string; title: string; completed: boolean }[];
   category?: string;
@@ -38,6 +47,7 @@ export interface RadarState {
   showDependencies: boolean;
   isConnectingDependency: boolean;
   connectingFromTaskId: string | null;
+  connectingFromPort: ConnectionPort | null;
   filterQuery: string;
   filterPriority: Priority | "all";
   filterStatus: TaskStatus | "all";
@@ -72,6 +82,7 @@ export const CONSTANTS = {
   TASK_BLIP_HEIGHT: 80,
   CENTER_RADIUS: 40,
   TIME_UPDATE_INTERVAL: 1000, // ms
+  CONNECTION_PORT_SIZE: 12, // px diameter of connection ports
 } as const;
 
 export const PRIORITY_COLORS = {
