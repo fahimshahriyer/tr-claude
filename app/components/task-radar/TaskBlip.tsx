@@ -189,19 +189,19 @@ export function TaskBlip({ task }: TaskBlipProps) {
           </div>
 
           {/* Content */}
-          <div className="p-3 space-y-2">
+          <div className="p-2 space-y-1.5">
             {/* Title and Priority */}
-            <div className="flex items-start gap-2">
+            <div className="flex items-start gap-1.5">
               <div
-                className="w-2 h-2 rounded-full mt-1 flex-shrink-0"
+                className="w-1.5 h-1.5 rounded-full mt-0.5 flex-shrink-0"
                 style={{ backgroundColor: PRIORITY_COLORS[task.priority] }}
                 title={`${task.priority} priority`}
               />
-              <h3 className="text-sm font-medium text-white line-clamp-2 flex-1">{task.title}</h3>
+              <h3 className="text-xs font-medium text-white line-clamp-2 flex-1">{task.title}</h3>
             </div>
 
             {/* Time remaining */}
-            <div className="flex items-center justify-between text-xs">
+            <div className="flex items-center justify-between text-[10px]">
               <span
                 className="font-semibold"
                 style={{ color: timeColor }}
@@ -210,7 +210,7 @@ export function TaskBlip({ task }: TaskBlipProps) {
                 {timeRemaining}
               </span>
               {task.status && (
-                <span className="px-2 py-0.5 rounded bg-gray-700/50 text-gray-300 text-[10px]">
+                <span className="px-1.5 py-0.5 rounded bg-gray-700/50 text-gray-300 text-[9px]">
                   {task.status}
                 </span>
               )}
@@ -263,11 +263,11 @@ export function TaskBlip({ task }: TaskBlipProps) {
         {/* Hover tooltip - shows task due date */}
         {isHovered && !isDraggingThis && !isConnectingDependency && (
           <div
-            className="absolute z-[100] pointer-events-none left-1/2 -translate-x-1/2 bottom-full mb-2"
+            className="absolute z-[100] pointer-events-none left-1/2 -translate-x-1/2 bottom-full mb-1"
           >
-            <div className="bg-gray-900/95 border border-gray-700 rounded-md px-2 py-1 shadow-lg backdrop-blur-sm">
-              <div className="text-xs text-gray-300 font-medium whitespace-nowrap flex items-center gap-1.5">
-                <span className="text-gray-400">🕐</span>
+            <div className="bg-gray-900/95 border border-gray-700 rounded px-1.5 py-0.5 shadow-lg backdrop-blur-sm">
+              <div className="text-[10px] text-gray-300 font-medium whitespace-nowrap flex items-center gap-1">
+                <span className="text-gray-400 text-[9px]">🕐</span>
                 {task.dueDate.toLocaleDateString("en-US", {
                   month: "short",
                   day: "numeric",
@@ -283,10 +283,10 @@ export function TaskBlip({ task }: TaskBlipProps) {
         {/* Drag tooltip - shows from original date to new date */}
         {isDraggingThis && dragState.newDueDate && (
           <div
-            className="absolute z-[100] pointer-events-none left-1/2 -translate-x-1/2 bottom-full mb-2"
+            className="absolute z-[100] pointer-events-none left-1/2 -translate-x-1/2 bottom-full mb-1"
           >
-            <div className="bg-gray-900/95 border border-zinc-400 rounded-md px-2 py-1 shadow-lg backdrop-blur-sm">
-              <div className="text-xs text-zinc-300 font-medium whitespace-nowrap">
+            <div className="bg-gray-900/95 border border-zinc-400 rounded px-1.5 py-0.5 shadow-lg backdrop-blur-sm">
+              <div className="text-[10px] text-zinc-300 font-medium whitespace-nowrap">
                 {task.dueDate.toLocaleDateString("en-US", {
                   month: "short",
                   day: "numeric",
@@ -294,7 +294,7 @@ export function TaskBlip({ task }: TaskBlipProps) {
                   minute: "2-digit",
                   hour12: true,
                 })}
-                <span className="text-gray-500 mx-1.5">→</span>
+                <span className="text-gray-500 mx-1">→</span>
                 {dragState.newDueDate.toLocaleDateString("en-US", {
                   month: "short",
                   day: "numeric",

@@ -80,11 +80,11 @@ export const CONSTANTS = {
   ZOOM_STEP: 0.1,
   RADIAL_LINES: 12,
   RING_LABEL_INTERVALS: [1, 3, 5, 7, 14, 21, 30, 60, 90], // days - added 3, 5, 21 for better granularity
-  TASK_BLIP_WIDTH: 200,
-  TASK_BLIP_HEIGHT: 80,
+  TASK_BLIP_WIDTH: 160,
+  TASK_BLIP_HEIGHT: 70,
   CENTER_RADIUS: 40,
   TIME_UPDATE_INTERVAL: 1000, // ms
-  CONNECTION_PORT_SIZE: 12, // px diameter of connection ports
+  CONNECTION_PORT_SIZE: 10, // px diameter of connection ports
 } as const;
 
 export const PRIORITY_COLORS = {
