@@ -30,7 +30,6 @@ export function TaskBlip({ task }: TaskBlipProps) {
 
   const blipRef = useRef<HTMLDivElement>(null);
   const [isHovered, setIsHovered] = React.useState(false);
-  const [blipHeight, setBlipHeight] = React.useState(CONSTANTS.TASK_BLIP_HEIGHT);
   const isDraggingThis = dragState.isDragging && dragState.taskId === task.id;
   const isSelected = selectedTaskId === task.id;
   const isConnectingFrom = isConnectingDependency && connectingFromTaskId === task.id;
@@ -66,14 +65,6 @@ export function TaskBlip({ task }: TaskBlipProps) {
     },
     [finishConnectingDependency]
   );
-
-  // Measure actual blip height after render
-  React.useEffect(() => {
-    if (blipRef.current) {
-      const height = blipRef.current.offsetHeight;
-      setBlipHeight(height);
-    }
-  }, [task.title]); // Re-measure when title changes
 
   // Handle mouse down to start drag (only if not in dependency mode)
   const handleMouseDown = useCallback(
@@ -255,43 +246,14 @@ export function TaskBlip({ task }: TaskBlipProps) {
           )}
         </div>
 
-        {/* Hover tooltip - shows due date and time remaining */}
+        {/* Hover tooltip - shows from current time to due date */}
         {isHovered && !isDraggingThis && !isConnectingDependency && (
           <div
-            className="absolute z-[100] pointer-events-none left-1/2 -translate-x-1/2"
-            style={{
-              top: `${blipHeight + 8}px`,
-            }}
+            className="absolute z-[100] pointer-events-none left-1/2 -translate-x-1/2 bottom-full mb-2"
           >
             <div className="bg-gray-900/95 border border-gray-700 rounded-md px-2 py-1 shadow-lg backdrop-blur-sm">
               <div className="text-xs text-gray-300 font-medium whitespace-nowrap">
-                {task.dueDate.toLocaleDateString("en-US", {
-                  month: "short",
-                  day: "numeric",
-                  hour: "numeric",
-                  minute: "2-digit",
-                  hour12: true,
-                })}
-                <span className="text-gray-500 mx-1.5">•</span>
-                <span className={isOverdue ? "text-red-400" : isUrgent ? "text-orange-400" : "text-gray-400"}>
-                  {timeRemaining}
-                </span>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Drag tooltip - shows new date → original date */}
-        {isDraggingThis && dragState.newDueDate && (
-          <div
-            className="absolute z-[100] pointer-events-none left-1/2 -translate-x-1/2"
-            style={{
-              top: `${blipHeight + 8}px`,
-            }}
-          >
-            <div className="bg-gray-900/95 border border-emerald-500 rounded-md px-2 py-1 shadow-lg backdrop-blur-sm">
-              <div className="text-xs text-emerald-300 font-medium whitespace-nowrap">
-                {dragState.newDueDate.toLocaleDateString("en-US", {
+                {currentTime.toLocaleDateString("en-US", {
                   month: "short",
                   day: "numeric",
                   hour: "numeric",
@@ -300,6 +262,33 @@ export function TaskBlip({ task }: TaskBlipProps) {
                 })}
                 <span className="text-gray-500 mx-1.5">→</span>
                 {task.dueDate.toLocaleDateString("en-US", {
+                  month: "short",
+                  day: "numeric",
+                  hour: "numeric",
+                  minute: "2-digit",
+                  hour12: true,
+                })}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Drag tooltip - shows from original date to new date */}
+        {isDraggingThis && dragState.newDueDate && (
+          <div
+            className="absolute z-[100] pointer-events-none left-1/2 -translate-x-1/2 bottom-full mb-2"
+          >
+            <div className="bg-gray-900/95 border border-emerald-500 rounded-md px-2 py-1 shadow-lg backdrop-blur-sm">
+              <div className="text-xs text-emerald-300 font-medium whitespace-nowrap">
+                {task.dueDate.toLocaleDateString("en-US", {
+                  month: "short",
+                  day: "numeric",
+                  hour: "numeric",
+                  minute: "2-digit",
+                  hour12: true,
+                })}
+                <span className="text-gray-500 mx-1.5">→</span>
+                {dragState.newDueDate.toLocaleDateString("en-US", {
                   month: "short",
                   day: "numeric",
                   hour: "numeric",
