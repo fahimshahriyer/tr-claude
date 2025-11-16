@@ -30,6 +30,7 @@ export function TaskBlip({ task }: TaskBlipProps) {
 
   const blipRef = useRef<HTMLDivElement>(null);
   const [isHovered, setIsHovered] = React.useState(false);
+  const [blipHeight, setBlipHeight] = React.useState(CONSTANTS.TASK_BLIP_HEIGHT);
   const isDraggingThis = dragState.isDragging && dragState.taskId === task.id;
   const isSelected = selectedTaskId === task.id;
   const isConnectingFrom = isConnectingDependency && connectingFromTaskId === task.id;
@@ -65,6 +66,14 @@ export function TaskBlip({ task }: TaskBlipProps) {
     },
     [finishConnectingDependency]
   );
+
+  // Measure actual blip height after render
+  React.useEffect(() => {
+    if (blipRef.current) {
+      const height = blipRef.current.offsetHeight;
+      setBlipHeight(height);
+    }
+  }, [task.title]); // Re-measure when title changes
 
   // Handle mouse down to start drag (only if not in dependency mode)
   const handleMouseDown = useCallback(
@@ -135,7 +144,6 @@ export function TaskBlip({ task }: TaskBlipProps) {
           left: `${adjustedX}px`,
           top: `${adjustedY}px`,
           width: `${CONSTANTS.TASK_BLIP_WIDTH}px`,
-          height: `${CONSTANTS.TASK_BLIP_HEIGHT}px`,
         }}
         onMouseDown={handleMouseDown}
         onClick={handleClick}
@@ -143,7 +151,7 @@ export function TaskBlip({ task }: TaskBlipProps) {
         onMouseLeave={() => setIsHovered(false)}
       >
         <div
-          className={`rounded-lg backdrop-blur-sm border transition-all h-full flex flex-col ${
+          className={`rounded-lg backdrop-blur-sm border transition-all ${
             isConnectingFrom
               ? "bg-blue-900/90 border-blue-500 shadow-lg shadow-blue-500/30 animate-pulse"
               : canConnectTo
@@ -167,7 +175,7 @@ export function TaskBlip({ task }: TaskBlipProps) {
           }}
         >
           {/* Drag handle */}
-          <div className="flex items-center justify-center py-1 border-b border-gray-700/50 flex-shrink-0">
+          <div className="flex items-center justify-center py-1 border-b border-gray-700/50">
             <div className="flex gap-1">
               <div className="w-1 h-1 rounded-full bg-gray-600"></div>
               <div className="w-1 h-1 rounded-full bg-gray-600"></div>
@@ -176,19 +184,19 @@ export function TaskBlip({ task }: TaskBlipProps) {
           </div>
 
           {/* Content */}
-          <div className="p-3 flex flex-col justify-between flex-1 min-h-0">
+          <div className="p-3 space-y-2">
             {/* Title and Priority */}
-            <div className="flex items-start gap-2 mb-2">
+            <div className="flex items-start gap-2">
               <div
                 className="w-2 h-2 rounded-full mt-1 flex-shrink-0"
                 style={{ backgroundColor: PRIORITY_COLORS[task.priority] }}
                 title={`${task.priority} priority`}
               />
-              <h3 className="text-sm font-medium text-white line-clamp-2 flex-1 overflow-hidden">{task.title}</h3>
+              <h3 className="text-sm font-medium text-white line-clamp-2 flex-1">{task.title}</h3>
             </div>
 
             {/* Time remaining */}
-            <div className="flex items-center justify-between text-xs flex-shrink-0">
+            <div className="flex items-center justify-between text-xs">
               <span
                 className="font-semibold"
                 style={{ color: timeColor }}
@@ -252,7 +260,7 @@ export function TaskBlip({ task }: TaskBlipProps) {
           <div
             className="absolute z-[100] pointer-events-none left-1/2 -translate-x-1/2"
             style={{
-              top: `${CONSTANTS.TASK_BLIP_HEIGHT + 16}px`,
+              top: `${blipHeight + 8}px`,
             }}
           >
             <div className="bg-gray-900/95 border border-gray-700 rounded-md px-2 py-1 shadow-lg backdrop-blur-sm">
@@ -278,7 +286,7 @@ export function TaskBlip({ task }: TaskBlipProps) {
           <div
             className="absolute z-[100] pointer-events-none left-1/2 -translate-x-1/2"
             style={{
-              top: `${CONSTANTS.TASK_BLIP_HEIGHT + 16}px`,
+              top: `${blipHeight + 8}px`,
             }}
           >
             <div className="bg-gray-900/95 border border-emerald-500 rounded-md px-2 py-1 shadow-lg backdrop-blur-sm">
