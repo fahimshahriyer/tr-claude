@@ -87,28 +87,34 @@ export function calculateTaskPosition(
   if (existingPosition?.isUserPositioned) {
     // Maintain user's chosen angle
     angle = existingPosition.relativeAngle;
+  } else if (existingPosition?.relativeAngle !== undefined) {
+    // Keep existing angle for tasks that have been positioned
+    angle = existingPosition.relativeAngle;
   } else if (allTasks) {
-    // Better distribution: group tasks by similar due dates and spread them evenly
-    const tasksAtSimilarDistance = allTasks.filter(t => {
-      const tDays = daysBetween(currentTime, t.dueDate);
-      return Math.abs(tDays - daysRemaining) < 0.5; // Within 12 hours
-    });
+    // Sort all tasks by ID for consistent ordering
+    const sortedTasks = [...allTasks].sort((a, b) => a.id.localeCompare(b.id));
+    const taskIndex = sortedTasks.findIndex(t => t.id === task.id);
+    const totalTasks = sortedTasks.length;
 
-    const taskIndex = tasksAtSimilarDistance.findIndex(t => t.id === task.id);
-    const totalAtDistance = tasksAtSimilarDistance.length;
+    // Use golden angle for optimal distribution (prevents clustering)
+    // Golden angle ≈ 137.5° creates a spiral pattern that looks natural
+    const goldenAngle = Math.PI * (3 - Math.sqrt(5)); // ≈ 2.399 radians
 
-    if (totalAtDistance > 1) {
-      // Distribute evenly around the circle
-      angle = (taskIndex / totalAtDistance) * 2 * Math.PI;
-    } else {
-      // Use deterministic hash of task ID
-      const hash = hashString(task.id);
-      angle = (hash % 360) * (Math.PI / 180);
-    }
+    // Base angle uses golden angle spiral
+    let baseAngle = (taskIndex * goldenAngle) % (2 * Math.PI);
+
+    // Add variation based on priority to further spread tasks
+    const priorityOffset = task.priority === "high" ? 0 : task.priority === "medium" ? 0.5 : 1.0;
+
+    // Add small deterministic offset based on task properties
+    const hash = hashString(task.id + (task.title || ""));
+    const hashOffset = ((hash % 100) / 100) * 0.3; // Small variation (0-0.3 radians)
+
+    angle = baseAngle + priorityOffset + hashOffset;
   } else {
-    // Fallback: Use deterministic hash of task ID
-    const hash = hashString(task.id);
-    angle = (hash % 360) * (Math.PI / 180);
+    // Fallback: Use improved hash with better distribution
+    const hash = hashString(task.id + (task.title || "") + (task.priority || ""));
+    angle = (hash / 1000000) * 2 * Math.PI;
   }
 
   const { x, y } = polarToCartesian(centerX, centerY, scaledDistance, angle);
