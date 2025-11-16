@@ -48,6 +48,8 @@ export interface RadarState {
   isConnectingDependency: boolean;
   connectingFromTaskId: string | null;
   connectingFromPort: ConnectionPort | null;
+  connectingMouseX: number;
+  connectingMouseY: number;
   filterQuery: string;
   filterPriority: Priority | "all";
   filterStatus: TaskStatus | "all";

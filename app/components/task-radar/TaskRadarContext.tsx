@@ -36,6 +36,7 @@ interface TaskRadarContextValue extends RadarState {
   finishConnectingDependency: (toTaskId: string, toPort?: ConnectionPort) => void;
   cancelConnectingDependency: () => void;
   removeDependency: (taskId: string, dependencyId: string) => void;
+  updateConnectingMouse: (x: number, y: number) => void;
 
   // Filters
   setFilterQuery: (query: string) => void;
@@ -84,6 +85,8 @@ export function TaskRadarProvider({ children }: { children: React.ReactNode }) {
   const [isConnectingDependency, setIsConnectingDependency] = useState(false);
   const [connectingFromTaskId, setConnectingFromTaskId] = useState<string | null>(null);
   const [connectingFromPort, setConnectingFromPort] = useState<ConnectionPort | null>(null);
+  const [connectingMouseX, setConnectingMouseX] = useState(0);
+  const [connectingMouseY, setConnectingMouseY] = useState(0);
   const [filterQuery, setFilterQuery] = useState("");
   const [filterPriority, setFilterPriority] = useState<Priority | "all">("all");
   const [filterStatus, setFilterStatus] = useState<TaskStatus | "all">("all");
@@ -403,6 +406,13 @@ export function TaskRadarProvider({ children }: { children: React.ReactNode }) {
     setIsConnectingDependency(false);
     setConnectingFromTaskId(null);
     setConnectingFromPort(null);
+    setConnectingMouseX(0);
+    setConnectingMouseY(0);
+  }, []);
+
+  const updateConnectingMouse = useCallback((x: number, y: number) => {
+    setConnectingMouseX(x);
+    setConnectingMouseY(y);
   }, []);
 
   const removeDependency = useCallback((taskId: string, dependencyId: string) => {
@@ -483,6 +493,8 @@ export function TaskRadarProvider({ children }: { children: React.ReactNode }) {
     isConnectingDependency,
     connectingFromTaskId,
     connectingFromPort,
+    connectingMouseX,
+    connectingMouseY,
     filterQuery,
     filterPriority,
     filterStatus,
@@ -515,6 +527,7 @@ export function TaskRadarProvider({ children }: { children: React.ReactNode }) {
     finishConnectingDependency,
     cancelConnectingDependency,
     removeDependency,
+    updateConnectingMouse,
 
     // Filters
     setFilterQuery,

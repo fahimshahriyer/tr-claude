@@ -17,6 +17,8 @@ export function TaskRadarCanvas() {
     panOffset,
     setPanOffset,
     selectTask,
+    isConnectingDependency,
+    updateConnectingMouse,
   } = useTaskRadar();
 
   const tasks = getFilteredTasks();
@@ -47,11 +49,13 @@ export function TaskRadarCanvas() {
     };
   }, [setViewport]);
 
-  // Handle global mouse move for dragging
+  // Handle global mouse move for dragging and connecting
   const handleMouseMove = useCallback(
     (e: MouseEvent) => {
       if (dragState.isDragging) {
         updateDrag(e.clientX, e.clientY);
+      } else if (isConnectingDependency) {
+        updateConnectingMouse(e.clientX, e.clientY);
       } else if (isPanning && !centerLockEnabled) {
         const dx = e.clientX - panStart.x;
         const dy = e.clientY - panStart.y;
@@ -62,7 +66,7 @@ export function TaskRadarCanvas() {
         setPanStart({ x: e.clientX, y: e.clientY });
       }
     },
-    [dragState.isDragging, isPanning, centerLockEnabled, panStart, panOffset, updateDrag, setPanOffset]
+    [dragState.isDragging, isConnectingDependency, isPanning, centerLockEnabled, panStart, panOffset, updateDrag, updateConnectingMouse, setPanOffset]
   );
 
   // Handle global mouse up for dragging
@@ -77,7 +81,7 @@ export function TaskRadarCanvas() {
 
   // Attach global listeners
   useEffect(() => {
-    if (dragState.isDragging || isPanning) {
+    if (dragState.isDragging || isPanning || isConnectingDependency) {
       window.addEventListener("mousemove", handleMouseMove);
       window.addEventListener("mouseup", handleMouseUp);
 
@@ -86,7 +90,7 @@ export function TaskRadarCanvas() {
         window.removeEventListener("mouseup", handleMouseUp);
       };
     }
-  }, [dragState.isDragging, isPanning, handleMouseMove, handleMouseUp]);
+  }, [dragState.isDragging, isPanning, isConnectingDependency, handleMouseMove, handleMouseUp]);
 
   // Handle background mouse down for panning
   const handleBackgroundMouseDown = useCallback(

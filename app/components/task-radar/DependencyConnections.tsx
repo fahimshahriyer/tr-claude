@@ -14,6 +14,8 @@ export function DependencyConnections() {
     isConnectingDependency,
     connectingFromTaskId,
     connectingFromPort,
+    connectingMouseX,
+    connectingMouseY,
     selectedTaskId,
   } = useTaskRadar();
 
@@ -259,8 +261,8 @@ export function DependencyConnections() {
               <line
                 x1={fromPos.x}
                 y1={fromPos.y}
-                x2={viewport.centerX}
-                y2={viewport.centerY}
+                x2={connectingMouseX}
+                y2={connectingMouseY}
                 stroke="#10b981"
                 strokeWidth="2"
                 strokeDasharray="5 5"

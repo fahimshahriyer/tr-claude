@@ -27,6 +27,7 @@ export function TaskBlip({ task }: TaskBlipProps) {
   } = useTaskRadar();
 
   const blipRef = useRef<HTMLDivElement>(null);
+  const [isHovered, setIsHovered] = React.useState(false);
   const isDraggingThis = dragState.isDragging && dragState.taskId === task.id;
   const isSelected = selectedTaskId === task.id;
   const isConnectingFrom = isConnectingDependency && connectingFromTaskId === task.id;
@@ -104,7 +105,7 @@ export function TaskBlip({ task }: TaskBlipProps) {
     <>
       <div
         ref={blipRef}
-        className={`absolute transition-all duration-300 animate-fade-in ${
+        className={`absolute transition-all duration-300 animate-fade-in select-none ${
           isConnectingDependency
             ? canConnectTo
               ? "cursor-crosshair z-40"
@@ -119,6 +120,8 @@ export function TaskBlip({ task }: TaskBlipProps) {
         }}
         onMouseDown={handleMouseDown}
         onClick={handleClick}
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
       >
         <div
           className={`rounded-lg backdrop-blur-sm border transition-all ${
@@ -190,6 +193,7 @@ export function TaskBlip({ task }: TaskBlipProps) {
                 taskId={task.id}
                 isConnecting={isConnectingDependency}
                 isSource={isConnectingFrom && connectingFromPort === "top"}
+                isTaskHovered={isHovered}
                 onStartConnect={handleStartConnect}
                 onFinishConnect={handleFinishConnect}
               />
@@ -198,6 +202,7 @@ export function TaskBlip({ task }: TaskBlipProps) {
                 taskId={task.id}
                 isConnecting={isConnectingDependency}
                 isSource={isConnectingFrom && connectingFromPort === "right"}
+                isTaskHovered={isHovered}
                 onStartConnect={handleStartConnect}
                 onFinishConnect={handleFinishConnect}
               />
@@ -206,6 +211,7 @@ export function TaskBlip({ task }: TaskBlipProps) {
                 taskId={task.id}
                 isConnecting={isConnectingDependency}
                 isSource={isConnectingFrom && connectingFromPort === "bottom"}
+                isTaskHovered={isHovered}
                 onStartConnect={handleStartConnect}
                 onFinishConnect={handleFinishConnect}
               />
@@ -214,6 +220,7 @@ export function TaskBlip({ task }: TaskBlipProps) {
                 taskId={task.id}
                 isConnecting={isConnectingDependency}
                 isSource={isConnectingFrom && connectingFromPort === "left"}
+                isTaskHovered={isHovered}
                 onStartConnect={handleStartConnect}
                 onFinishConnect={handleFinishConnect}
               />
