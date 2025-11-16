@@ -24,6 +24,7 @@ export function TaskRadarCanvas() {
     zoom,
     currentTime,
     viewport,
+    sidebarCollapsed,
   } = useTaskRadar();
 
   const tasks = getFilteredTasks();
@@ -34,7 +35,7 @@ export function TaskRadarCanvas() {
   const [cursorDate, setCursorDate] = useState<Date | null>(null);
   const [cursorPos, setCursorPos] = useState({ x: 0, y: 0 });
 
-  // Update viewport dimensions on mount and resize
+  // Update viewport dimensions on mount, resize, and sidebar state change
   useEffect(() => {
     const updateViewport = () => {
       if (containerRef.current) {
@@ -48,13 +49,15 @@ export function TaskRadarCanvas() {
       }
     };
 
-    updateViewport();
+    // Use requestAnimationFrame to ensure layout has settled after sidebar state change
+    const rafId = requestAnimationFrame(updateViewport);
     window.addEventListener("resize", updateViewport);
 
     return () => {
+      cancelAnimationFrame(rafId);
       window.removeEventListener("resize", updateViewport);
     };
-  }, [setViewport]);
+  }, [setViewport, sidebarCollapsed]);
 
   // Handle global mouse move for dragging and connecting
   const handleMouseMove = useCallback(
