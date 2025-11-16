@@ -30,8 +30,8 @@ export function RadarControls() {
 
   return (
     <>
-      {/* Top-right controls */}
-      <div className="absolute top-4 right-4 z-50 flex flex-col gap-2">
+      {/* Top-right controls (adjusted for sidebar) */}
+      <div className="absolute top-4 right-[400px] z-50 flex flex-col gap-2">
         {/* Zoom controls */}
         <div className="bg-gray-900/90 backdrop-blur-sm border border-gray-700 rounded-lg p-2 flex flex-col gap-1">
           <button

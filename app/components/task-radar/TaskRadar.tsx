@@ -4,7 +4,7 @@ import React, { useCallback, useEffect } from "react";
 import { TaskRadarProvider, useTaskRadar } from "./TaskRadarContext";
 import { TaskRadarCanvas } from "./TaskRadarCanvas";
 import { EnhancedControls } from "./EnhancedControls";
-import { TaskDetails } from "./TaskDetails";
+import { TaskSidebar } from "./TaskSidebar";
 import { CONSTANTS } from "./types";
 
 function TaskRadarContent() {
@@ -40,7 +40,7 @@ function TaskRadarContent() {
     >
       <TaskRadarCanvas />
       <EnhancedControls />
-      <TaskDetails />
+      <TaskSidebar />
     </div>
   );
 }

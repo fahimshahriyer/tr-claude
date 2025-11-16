@@ -97,8 +97,8 @@ export function EnhancedControls() {
 
   return (
     <>
-      {/* Main Control Panel - Top Right */}
-      <div className="absolute top-4 right-4 z-50 flex flex-col gap-2">
+      {/* Main Control Panel - Top Right (adjusted for sidebar) */}
+      <div className="absolute top-4 right-[400px] z-50 flex flex-col gap-2">
         {/* Quick Actions */}
         <div className="bg-gray-900/90 backdrop-blur-sm border border-gray-700 rounded-lg p-2 flex gap-2">
           <button
