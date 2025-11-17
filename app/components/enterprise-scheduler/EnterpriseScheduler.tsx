@@ -57,16 +57,18 @@ function SchedulerInner({ className }: { className: string }) {
     });
   }, [dispatch]);
 
-  // Handle wheel events for horizontal scrolling
+  // Handle wheel events for horizontal scrolling and zoom
   const handleWheel = useCallback((e: React.WheelEvent<HTMLDivElement>) => {
     if (e.ctrlKey || e.metaKey) {
-      // Zoom with Ctrl/Cmd + wheel
+      // Zoom with Ctrl/Cmd + wheel - prevent browser zoom
       e.preventDefault();
+      e.stopPropagation();
       if (e.deltaY < 0) {
         dispatch({ type: 'ZOOM_IN' });
       } else {
         dispatch({ type: 'ZOOM_OUT' });
       }
+      return false;
     } else if (e.shiftKey) {
       // Horizontal scroll with Shift + wheel
       e.preventDefault();
@@ -75,6 +77,18 @@ function SchedulerInner({ className }: { className: string }) {
       }
     }
   }, [dispatch]);
+
+  // Prevent browser zoom on timeline area
+  useEffect(() => {
+    const handleWheelCapture = (e: WheelEvent) => {
+      if ((e.ctrlKey || e.metaKey) && timelinePanelRef.current?.contains(e.target as Node)) {
+        e.preventDefault();
+      }
+    };
+
+    document.addEventListener('wheel', handleWheelCapture, { passive: false });
+    return () => document.removeEventListener('wheel', handleWheelCapture);
+  }, []);
 
   // Measure container size
   useEffect(() => {
@@ -132,15 +146,47 @@ function SchedulerInner({ className }: { className: string }) {
       });
 
       // Update ghost event position based on drag type
-      if (state.dragState.dragType === 'move' && state.dragState.originalEvent) {
+      if (state.dragState.originalEvent) {
         const deltaX = e.clientX - state.dragState.startX;
         const deltaY = e.clientY - state.dragState.startY;
 
-        const pixelsPerMs = config.snapIncrement * 60 * 1000 / state.timeAxis.cellWidth;
-        const timeDelta = deltaX * pixelsPerMs;
+        // Calculate milliseconds per pixel
+        const msPerPixel = state.zoomLevel.tickSize / state.timeAxis.cellWidth;
+        const timeDelta = deltaX * msPerPixel;
 
-        const newStartDate = new Date(state.dragState.originalEvent.startDate.getTime() + timeDelta);
-        const newEndDate = new Date(state.dragState.originalEvent.endDate.getTime() + timeDelta);
+        let newStartDate: Date;
+        let newEndDate: Date;
+        let newResourceId = state.dragState.originalEvent.resourceId;
+
+        if (state.dragState.dragType === 'move') {
+          // Move: shift both start and end times
+          newStartDate = new Date(state.dragState.originalEvent.startDate.getTime() + timeDelta);
+          newEndDate = new Date(state.dragState.originalEvent.endDate.getTime() + timeDelta);
+
+          // Calculate resource change based on deltaY
+          const resourceIndexDelta = Math.round(deltaY / config.rowHeight);
+          // TODO: Update resource based on resourceIndexDelta
+        } else if (state.dragState.dragType === 'resize-start') {
+          // Resize start: only change start time
+          newStartDate = new Date(state.dragState.originalEvent.startDate.getTime() + timeDelta);
+          newEndDate = state.dragState.originalEvent.endDate;
+
+          // Ensure start doesn't go past end
+          if (newStartDate >= newEndDate) {
+            newStartDate = new Date(newEndDate.getTime() - config.minEventDuration * 60 * 1000);
+          }
+        } else if (state.dragState.dragType === 'resize-end') {
+          // Resize end: only change end time
+          newStartDate = state.dragState.originalEvent.startDate;
+          newEndDate = new Date(state.dragState.originalEvent.endDate.getTime() + timeDelta);
+
+          // Ensure end doesn't go before start
+          if (newEndDate <= newStartDate) {
+            newEndDate = new Date(newStartDate.getTime() + config.minEventDuration * 60 * 1000);
+          }
+        } else {
+          return; // Unknown drag type
+        }
 
         dispatch({
           type: 'SET_DRAG_STATE',
@@ -149,6 +195,7 @@ function SchedulerInner({ className }: { className: string }) {
               ...state.dragState.originalEvent,
               startDate: newStartDate,
               endDate: newEndDate,
+              resourceId: newResourceId,
             },
           },
         });

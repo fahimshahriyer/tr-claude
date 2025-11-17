@@ -39,10 +39,17 @@ export function TimelineGrid({ height, scrollLeft }: TimelineGridProps) {
     return cols;
   }, [timeAxis.startDate, timeAxis.endDate, timeAxis.cellWidth, zoomLevel.tickSize]);
 
+  // Calculate total width for the grid
+  const totalWidth = useMemo(() => {
+    const timeDuration = timeAxis.endDate.getTime() - timeAxis.startDate.getTime();
+    const numTicks = timeDuration / zoomLevel.tickSize;
+    return numTicks * timeAxis.cellWidth;
+  }, [timeAxis.startDate, timeAxis.endDate, timeAxis.cellWidth, zoomLevel.tickSize]);
+
   return (
     <div
       className="absolute top-0 left-0 pointer-events-none"
-      style={{ width: '100%', height: '100%' }}
+      style={{ width: totalWidth, height: '100%' }}
     >
       <div className="relative h-full flex">
         {columns.map((col, index) => (

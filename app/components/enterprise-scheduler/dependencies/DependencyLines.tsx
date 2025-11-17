@@ -67,6 +67,17 @@ export function DependencyLines({ scrollLeft, scrollTop, rowHeight }: Dependency
     }>;
   }, [dependencies, events, flatResources, timeAxis, zoomLevel, showDependencies, rowHeight]);
 
+  // Calculate total dimensions
+  const totalWidth = useMemo(() => {
+    const timeDuration = timeAxis.endDate.getTime() - timeAxis.startDate.getTime();
+    const numTicks = timeDuration / zoomLevel.tickSize;
+    return numTicks * timeAxis.cellWidth;
+  }, [timeAxis.startDate, timeAxis.endDate, timeAxis.cellWidth, zoomLevel.tickSize]);
+
+  const totalHeight = useMemo(() => {
+    return flatResources.length * rowHeight;
+  }, [flatResources.length, rowHeight]);
+
   if (!showDependencies || dependencyPaths.length === 0) {
     return null;
   }
@@ -75,8 +86,8 @@ export function DependencyLines({ scrollLeft, scrollTop, rowHeight }: Dependency
     <svg
       className="absolute top-0 left-0 pointer-events-none overflow-visible z-5"
       style={{
-        width: '100%',
-        height: '100%',
+        width: totalWidth,
+        height: totalHeight,
       }}
     >
       {dependencyPaths.map((path, index) => (
