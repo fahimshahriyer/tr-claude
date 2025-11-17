@@ -203,9 +203,6 @@ function SchedulerInner({ className }: { className: string }) {
 
         {/* Timeline area */}
         <div className="flex-1 flex flex-col overflow-hidden">
-          {/* Time axis header */}
-          <TimeAxis width={timelineWidth} scrollLeft={scrollLeft} />
-
           {/* Timeline panel with events */}
           <div
             ref={timelinePanelRef}
@@ -213,6 +210,9 @@ function SchedulerInner({ className }: { className: string }) {
             onScroll={handleScroll}
             onWheel={handleWheel}
           >
+            {/* Time axis header - sticky within scroll container */}
+            <TimeAxis width={timelineWidth} scrollLeft={0} />
+
             <TimelinePanel
               scrollTop={scrollTop}
               scrollLeft={scrollLeft}

@@ -41,8 +41,8 @@ export function TimelineGrid({ height, scrollLeft }: TimelineGridProps) {
 
   return (
     <div
-      className="absolute inset-0 pointer-events-none"
-      style={{ transform: `translateX(-${scrollLeft}px)` }}
+      className="absolute top-0 left-0 pointer-events-none"
+      style={{ width: '100%', height: '100%' }}
     >
       <div className="relative h-full flex">
         {columns.map((col, index) => (
@@ -62,12 +62,12 @@ export function TimelineGrid({ height, scrollLeft }: TimelineGridProps) {
       </div>
 
       {/* Today indicator */}
-      <TodayIndicator scrollLeft={scrollLeft} />
+      <TodayIndicator />
     </div>
   );
 }
 
-function TodayIndicator({ scrollLeft }: { scrollLeft: number }) {
+function TodayIndicator() {
   const { state } = useScheduler();
   const { timeAxis, zoomLevel } = state;
 
