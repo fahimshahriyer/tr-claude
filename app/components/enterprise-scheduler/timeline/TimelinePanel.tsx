@@ -94,8 +94,25 @@ export function TimelinePanel({
   const rowCount = flatResources.length;
   const totalHeight = rowCount * rowHeight;
 
+  // Calculate total timeline width
+  const totalWidth = useMemo(() => {
+    const timeDuration = timeAxis.endDate.getTime() - timeAxis.startDate.getTime();
+    const numTicks = timeDuration / zoomLevel.tickSize;
+    return numTicks * timeAxis.cellWidth;
+  }, [timeAxis.startDate, timeAxis.endDate, timeAxis.cellWidth, zoomLevel.tickSize]);
+
   return (
     <div className="relative bg-slate-900 overflow-hidden" style={{ height }}>
+      {/* Spacer to enable scrolling - defines the scrollable area */}
+      <div
+        style={{
+          width: totalWidth,
+          height: totalHeight,
+          position: 'absolute',
+          pointerEvents: 'none',
+        }}
+      />
+
       {/* Resource row backgrounds */}
       <div
         className="absolute inset-0"
