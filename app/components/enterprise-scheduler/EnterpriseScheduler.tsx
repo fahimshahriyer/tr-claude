@@ -136,83 +136,82 @@ function SchedulerInner({ className }: { className: string }) {
   useEffect(() => {
     if (!state.dragState.isDragging) return;
 
+    const dragState = state.dragState;
+    const zoomLevel = state.zoomLevel;
+    const timeAxis = state.timeAxis;
+
     const handleMouseMove = (e: MouseEvent) => {
+      if (!dragState.originalEvent) return;
+
+      const deltaX = e.clientX - dragState.startX;
+      const deltaY = e.clientY - dragState.startY;
+
+      // Calculate milliseconds per pixel
+      const msPerPixel = zoomLevel.tickSize / timeAxis.cellWidth;
+      const timeDelta = deltaX * msPerPixel;
+
+      let newStartDate: Date;
+      let newEndDate: Date;
+      let newResourceId = dragState.originalEvent.resourceId;
+
+      if (dragState.dragType === 'move') {
+        // Move: shift both start and end times
+        newStartDate = new Date(dragState.originalEvent.startDate.getTime() + timeDelta);
+        newEndDate = new Date(dragState.originalEvent.endDate.getTime() + timeDelta);
+
+        // Calculate resource change based on deltaY
+        const resourceIndexDelta = Math.round(deltaY / config.rowHeight);
+        // TODO: Update resource based on resourceIndexDelta
+      } else if (dragState.dragType === 'resize-start') {
+        // Resize start: only change start time
+        newStartDate = new Date(dragState.originalEvent.startDate.getTime() + timeDelta);
+        newEndDate = dragState.originalEvent.endDate;
+
+        // Ensure start doesn't go past end
+        if (newStartDate >= newEndDate) {
+          newStartDate = new Date(newEndDate.getTime() - config.minEventDuration * 60 * 1000);
+        }
+      } else if (dragState.dragType === 'resize-end') {
+        // Resize end: only change end time
+        newStartDate = dragState.originalEvent.startDate;
+        newEndDate = new Date(dragState.originalEvent.endDate.getTime() + timeDelta);
+
+        // Ensure end doesn't go before start
+        if (newEndDate <= newStartDate) {
+          newEndDate = new Date(newStartDate.getTime() + config.minEventDuration * 60 * 1000);
+        }
+      } else {
+        return; // Unknown drag type
+      }
+
       dispatch({
         type: 'SET_DRAG_STATE',
         payload: {
           currentX: e.clientX,
           currentY: e.clientY,
+          ghostEvent: {
+            ...dragState.originalEvent,
+            startDate: newStartDate,
+            endDate: newEndDate,
+            resourceId: newResourceId,
+          },
         },
       });
-
-      // Update ghost event position based on drag type
-      if (state.dragState.originalEvent) {
-        const deltaX = e.clientX - state.dragState.startX;
-        const deltaY = e.clientY - state.dragState.startY;
-
-        // Calculate milliseconds per pixel
-        const msPerPixel = state.zoomLevel.tickSize / state.timeAxis.cellWidth;
-        const timeDelta = deltaX * msPerPixel;
-
-        let newStartDate: Date;
-        let newEndDate: Date;
-        let newResourceId = state.dragState.originalEvent.resourceId;
-
-        if (state.dragState.dragType === 'move') {
-          // Move: shift both start and end times
-          newStartDate = new Date(state.dragState.originalEvent.startDate.getTime() + timeDelta);
-          newEndDate = new Date(state.dragState.originalEvent.endDate.getTime() + timeDelta);
-
-          // Calculate resource change based on deltaY
-          const resourceIndexDelta = Math.round(deltaY / config.rowHeight);
-          // TODO: Update resource based on resourceIndexDelta
-        } else if (state.dragState.dragType === 'resize-start') {
-          // Resize start: only change start time
-          newStartDate = new Date(state.dragState.originalEvent.startDate.getTime() + timeDelta);
-          newEndDate = state.dragState.originalEvent.endDate;
-
-          // Ensure start doesn't go past end
-          if (newStartDate >= newEndDate) {
-            newStartDate = new Date(newEndDate.getTime() - config.minEventDuration * 60 * 1000);
-          }
-        } else if (state.dragState.dragType === 'resize-end') {
-          // Resize end: only change end time
-          newStartDate = state.dragState.originalEvent.startDate;
-          newEndDate = new Date(state.dragState.originalEvent.endDate.getTime() + timeDelta);
-
-          // Ensure end doesn't go before start
-          if (newEndDate <= newStartDate) {
-            newEndDate = new Date(newStartDate.getTime() + config.minEventDuration * 60 * 1000);
-          }
-        } else {
-          return; // Unknown drag type
-        }
-
-        dispatch({
-          type: 'SET_DRAG_STATE',
-          payload: {
-            ghostEvent: {
-              ...state.dragState.originalEvent,
-              startDate: newStartDate,
-              endDate: newEndDate,
-              resourceId: newResourceId,
-            },
-          },
-        });
-      }
     };
 
     const handleMouseUp = (e: MouseEvent) => {
-      if (state.dragState.ghostEvent && state.dragState.eventId) {
+      e.preventDefault();
+
+      if (dragState.ghostEvent && dragState.eventId) {
         // Commit the drag operation
         dispatch({
           type: 'UPDATE_EVENT',
           payload: {
-            id: state.dragState.eventId,
+            id: dragState.eventId,
             updates: {
-              startDate: state.dragState.ghostEvent.startDate,
-              endDate: state.dragState.ghostEvent.endDate,
-              resourceId: state.dragState.ghostEvent.resourceId,
+              startDate: dragState.ghostEvent.startDate,
+              endDate: dragState.ghostEvent.endDate,
+              resourceId: dragState.ghostEvent.resourceId,
             },
           },
         });
@@ -228,7 +227,7 @@ function SchedulerInner({ className }: { className: string }) {
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
     };
-  }, [state.dragState, state.timeAxis, config, dispatch]);
+  }, [state.dragState.isDragging, dispatch, config.rowHeight, config.minEventDuration]);
 
   const sidebarWidth = config.sidebarWidth;
   const timelineWidth = containerSize.width;
