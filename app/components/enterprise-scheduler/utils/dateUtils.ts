@@ -132,20 +132,6 @@ export function formatDate(date: Date, format: string): string {
     result = result.replace('[Q]', quarter.toString());
   }
 
-  // Handle [Week] or [w] for week number - use placeholders to avoid double replacement
-  if (result.includes('W') || result.includes('[w]')) {
-    const weekNum = getWeekNumber(date);
-    const placeholder = '___WEEK_NUM___';
-
-    // Replace patterns with placeholder first
-    result = result.replace(/\[Week\]\s*W/g, `Week ${placeholder}`);
-    result = result.replace(/W\[w\]/g, `W${placeholder}`);
-    result = result.replace(/W/g, placeholder);
-
-    // Then replace all placeholders with actual week number
-    result = result.replace(new RegExp(placeholder, 'g'), weekNum.toString());
-  }
-
   // Sort keys by length descending to replace longer patterns first
   // This prevents "MMMM" -> "November" -> "Nove11ber" when replacing "M"
   const sortedKeys = Object.keys(map).sort((a, b) => b.length - a.length);
@@ -155,6 +141,17 @@ export function formatDate(date: Date, format: string): string {
     const regex = new RegExp(key, 'g');
     result = result.replace(regex, map[key]);
   });
+
+  // Handle [Week] or [w] for week number AFTER other replacements
+  // This prevents the placeholder from being affected by format token replacements
+  if (result.includes('W') || result.includes('[w]')) {
+    const weekNum = getWeekNumber(date);
+
+    // Replace week patterns directly with week number
+    result = result.replace(/\[Week\]\s*W/g, `Week ${weekNum}`);
+    result = result.replace(/W\[w\]/g, `W${weekNum}`);
+    result = result.replace(/W/g, weekNum.toString());
+  }
 
   return result;
 }
