@@ -73,9 +73,10 @@ export function DependencyLines({ scrollLeft, scrollTop, rowHeight }: Dependency
 
   return (
     <svg
-      className="absolute inset-0 pointer-events-none overflow-visible z-5"
+      className="absolute top-0 left-0 pointer-events-none overflow-visible z-5"
       style={{
-        transform: `translate(-${scrollLeft}px, -${scrollTop}px)`,
+        width: '100%',
+        height: '100%',
       }}
     >
       {dependencyPaths.map((path, index) => (

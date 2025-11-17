@@ -102,52 +102,33 @@ export function TimelinePanel({
   }, [timeAxis.startDate, timeAxis.endDate, timeAxis.cellWidth, zoomLevel.tickSize]);
 
   return (
-    <div className="relative bg-slate-900 overflow-hidden" style={{ height }}>
-      {/* Spacer to enable scrolling - defines the scrollable area */}
-      <div
-        style={{
-          width: totalWidth,
-          height: totalHeight,
-          position: 'absolute',
-          pointerEvents: 'none',
-        }}
-      />
-
+    <div className="relative bg-slate-900" style={{ width: totalWidth, height: totalHeight, minHeight: height }}>
       {/* Resource row backgrounds */}
-      <div
-        className="absolute inset-0"
-        style={{
-          transform: `translateY(-${scrollTop}px)`,
-        }}
-      >
+      <div className="absolute top-0 left-0" style={{ width: totalWidth, height: totalHeight }}>
         {flatResources.map((resource, index) => (
           <div
             key={resource.id}
             className="border-b border-slate-700/50 hover:bg-slate-800/30 transition-colors"
             style={{
               height: rowHeight,
+              width: totalWidth,
             }}
           />
         ))}
       </div>
 
       {/* Timeline grid */}
-      <TimelineGrid height={totalHeight} scrollLeft={scrollLeft} />
+      <TimelineGrid height={totalHeight} scrollLeft={0} />
 
       {/* Dependency lines */}
       <DependencyLines
-        scrollLeft={scrollLeft}
-        scrollTop={scrollTop}
+        scrollLeft={0}
+        scrollTop={0}
         rowHeight={rowHeight}
       />
 
       {/* Events */}
-      <div
-        className="absolute inset-0"
-        style={{
-          transform: `translate(-${scrollLeft}px, -${scrollTop}px)`,
-        }}
-      >
+      <div className="absolute top-0 left-0" style={{ width: totalWidth, height: totalHeight }}>
         {eventPositions.map(({ event, left, width, top, height }) => (
           <EventBar
             key={event.id}

@@ -35,6 +35,13 @@ export function TimeAxis({ width, scrollLeft }: TimeAxisProps) {
     );
   }, [timeAxis.startDate, timeAxis.endDate, zoomLevel.headerTiers, timeAxis.cellWidth, zoomLevel.tickSize]);
 
+  // Calculate total width for the time axis
+  const totalWidth = useMemo(() => {
+    const timeDuration = timeAxis.endDate.getTime() - timeAxis.startDate.getTime();
+    const numTicks = timeDuration / zoomLevel.tickSize;
+    return numTicks * timeAxis.cellWidth;
+  }, [timeAxis.startDate, timeAxis.endDate, timeAxis.cellWidth, zoomLevel.tickSize]);
+
   return (
     <div className="sticky top-0 z-30 bg-slate-800 border-b border-slate-700">
       {/* Multi-tier headers */}
@@ -44,7 +51,7 @@ export function TimeAxis({ width, scrollLeft }: TimeAxisProps) {
           className="flex border-b border-slate-700 last:border-b-0"
           style={{
             height: tierIndex === 0 ? 40 : tierIndex === 1 ? 35 : 30,
-            transform: `translateX(-${scrollLeft}px)`,
+            width: totalWidth,
           }}
         >
           {cells.map((cell, cellIndex) => (
