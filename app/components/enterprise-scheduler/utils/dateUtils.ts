@@ -126,32 +126,30 @@ export function formatDate(date: Date, format: string): string {
 
   let result = format;
 
-  // Handle [Q] for quarter
+  // Handle [Q] for quarter - use placeholder to prevent re-processing
   if (result.includes('[Q]')) {
     const quarter = Math.floor(date.getMonth() / 3) + 1;
-    result = result.replace('[Q]', quarter.toString());
+    result = result.replace(/\[Q\]/g, quarter.toString());
   }
 
-  // Sort keys by length descending to replace longer patterns first
-  // This prevents "MMMM" -> "November" -> "Nove11ber" when replacing "M"
-  const sortedKeys = Object.keys(map).sort((a, b) => b.length - a.length);
+  // Handle week numbers with special patterns - completely replace them first
+  const weekNum = getWeekNumber(date);
 
-  sortedKeys.forEach((key) => {
-    // Use global replace to handle multiple occurrences
-    const regex = new RegExp(key, 'g');
-    result = result.replace(regex, map[key]);
+  result = result.replace(/\[Week\]\s*W/g, `Week ${weekNum}`);
+  result = result.replace(/W\[w\]/g, `W${weekNum}`);
+
+  // Create a single regex that matches all format tokens, longest first
+  // This ensures "MMMM" is matched before "MMM", "MM", or "M"
+  // Note: W is excluded here since it's handled above with special patterns
+  const tokenPattern = new RegExp(
+    '(YYYY|MMMM|dddd|MMM|ddd|MM|DD|HH|mm|ss|YY|M|D|H|m|s)',
+    'g'
+  );
+
+  // Replace all tokens in a single pass
+  result = result.replace(tokenPattern, (match) => {
+    return map[match] || match;
   });
-
-  // Handle [Week] or [w] for week number AFTER other replacements
-  // This prevents the placeholder from being affected by format token replacements
-  if (result.includes('W') || result.includes('[w]')) {
-    const weekNum = getWeekNumber(date);
-
-    // Replace week patterns directly with week number
-    result = result.replace(/\[Week\]\s*W/g, `Week ${weekNum}`);
-    result = result.replace(/W\[w\]/g, `W${weekNum}`);
-    result = result.replace(/W/g, weekNum.toString());
-  }
 
   return result;
 }
