@@ -320,6 +320,7 @@ interface SchedulerContextValue {
   state: SchedulerState;
   config: SchedulerConfig;
   dispatch: React.Dispatch<SchedulerAction>;
+  scrollContainerRef: React.RefObject<HTMLDivElement>;
   // Convenience methods
   addEvent: (event: SchedulerEvent) => void;
   updateEvent: (id: string, updates: Partial<SchedulerEvent>) => void;
@@ -336,6 +337,8 @@ interface SchedulerContextValue {
   zoomOut: () => void;
   navigateToToday: () => void;
   navigateToDate: (date: Date) => void;
+  scrollToDate: (date: Date) => void;
+  scrollToPosition: (scrollLeft: number, scrollTop?: number) => void;
 }
 
 const SchedulerContext = createContext<SchedulerContextValue | null>(null);
@@ -381,6 +384,7 @@ export function SchedulerProvider({
 }: SchedulerProviderProps) {
   const config = { ...defaultConfig, ...configProp };
   const [state, dispatch] = useReducer(schedulerReducer, createInitialState(config));
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   // Initialize with provided data
   useEffect(() => {
@@ -441,25 +445,125 @@ export function SchedulerProvider({
   }, []);
 
   const zoomIn = useCallback(() => {
-    dispatch({ type: 'ZOOM_IN' });
-  }, []);
+    // Store current viewport center before zoom
+    if (scrollContainerRef.current) {
+      const container = scrollContainerRef.current;
+      const containerWidth = container.clientWidth;
+      const centerScrollLeft = container.scrollLeft + containerWidth / 2;
+
+      // Calculate what time is at the center using current zoom level
+      const { timeAxis, zoomLevel } = state;
+      const centerTime = timeAxis.startDate.getTime() +
+        (centerScrollLeft / timeAxis.cellWidth) * zoomLevel.tickSize;
+
+      // Calculate the next zoom level
+      const currentLevelIndex = ZOOM_LEVELS.findIndex((z) => z.level === zoomLevel.level);
+      const nextLevelIndex = Math.min(ZOOM_LEVELS.length - 1, currentLevelIndex + 1);
+      const nextZoomLevel = ZOOM_LEVELS[nextLevelIndex];
+
+      // Perform zoom
+      dispatch({ type: 'ZOOM_IN' });
+
+      // After zoom, adjust scroll to keep the same time at center
+      requestAnimationFrame(() => {
+        // Calculate new pixel position with the new zoom level
+        const newCenterPixel =
+          ((centerTime - timeAxis.startDate.getTime()) / nextZoomLevel.tickSize) *
+          nextZoomLevel.cellWidth;
+        const newScrollLeft = Math.max(0, newCenterPixel - containerWidth / 2);
+        container.scrollLeft = newScrollLeft;
+      });
+    } else {
+      dispatch({ type: 'ZOOM_IN' });
+    }
+  }, [state, scrollContainerRef]);
 
   const zoomOut = useCallback(() => {
-    dispatch({ type: 'ZOOM_OUT' });
-  }, []);
+    // Store current viewport center before zoom
+    if (scrollContainerRef.current) {
+      const container = scrollContainerRef.current;
+      const containerWidth = container.clientWidth;
+      const centerScrollLeft = container.scrollLeft + containerWidth / 2;
+
+      // Calculate what time is at the center using current zoom level
+      const { timeAxis, zoomLevel } = state;
+      const centerTime = timeAxis.startDate.getTime() +
+        (centerScrollLeft / timeAxis.cellWidth) * zoomLevel.tickSize;
+
+      // Calculate the previous zoom level
+      const currentLevelIndex = ZOOM_LEVELS.findIndex((z) => z.level === zoomLevel.level);
+      const prevLevelIndex = Math.max(0, currentLevelIndex - 1);
+      const prevZoomLevel = ZOOM_LEVELS[prevLevelIndex];
+
+      // Perform zoom
+      dispatch({ type: 'ZOOM_OUT' });
+
+      // After zoom, adjust scroll to keep the same time at center
+      requestAnimationFrame(() => {
+        // Calculate new pixel position with the new zoom level
+        const newCenterPixel =
+          ((centerTime - timeAxis.startDate.getTime()) / prevZoomLevel.tickSize) *
+          prevZoomLevel.cellWidth;
+        const newScrollLeft = Math.max(0, newCenterPixel - containerWidth / 2);
+        container.scrollLeft = newScrollLeft;
+      });
+    } else {
+      dispatch({ type: 'ZOOM_OUT' });
+    }
+  }, [state, scrollContainerRef]);
 
   const navigateToToday = useCallback(() => {
     dispatch({ type: 'NAVIGATE_TO_TODAY' });
+    // Scroll to today's position after a short delay to let the state update
+    setTimeout(() => {
+      const today = new Date();
+      scrollToDate(today);
+    }, 0);
   }, []);
 
   const navigateToDate = useCallback((date: Date) => {
     dispatch({ type: 'NAVIGATE_TO_DATE', payload: date });
+    // Scroll to the date's position after a short delay
+    setTimeout(() => {
+      scrollToDate(date);
+    }, 0);
+  }, []);
+
+  const scrollToDate = useCallback((date: Date) => {
+    if (!scrollContainerRef.current) return;
+
+    const { timeAxis, zoomLevel } = state;
+    const dateTime = date.getTime();
+    const startTime = timeAxis.startDate.getTime();
+
+    // Calculate pixel position of the date
+    const pixelPosition = ((dateTime - startTime) / zoomLevel.tickSize) * timeAxis.cellWidth;
+
+    // Scroll to center the date in the viewport
+    const containerWidth = scrollContainerRef.current.clientWidth;
+    const scrollLeft = Math.max(0, pixelPosition - containerWidth / 2);
+
+    scrollContainerRef.current.scrollTo({
+      left: scrollLeft,
+      behavior: 'smooth',
+    });
+  }, [state]);
+
+  const scrollToPosition = useCallback((scrollLeft: number, scrollTop?: number) => {
+    if (!scrollContainerRef.current) return;
+
+    scrollContainerRef.current.scrollTo({
+      left: scrollLeft,
+      top: scrollTop ?? scrollContainerRef.current.scrollTop,
+      behavior: 'smooth',
+    });
   }, []);
 
   const value: SchedulerContextValue = {
     state,
     config,
     dispatch,
+    scrollContainerRef,
     addEvent,
     updateEvent,
     deleteEvent,
@@ -475,6 +579,8 @@ export function SchedulerProvider({
     zoomOut,
     navigateToToday,
     navigateToDate,
+    scrollToDate,
+    scrollToPosition,
   };
 
   return <SchedulerContext.Provider value={value}>{children}</SchedulerContext.Provider>;

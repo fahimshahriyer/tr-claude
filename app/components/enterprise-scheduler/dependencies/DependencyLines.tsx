@@ -84,12 +84,30 @@ export function DependencyLines({ scrollLeft, scrollTop, rowHeight }: Dependency
 
   return (
     <svg
-      className="absolute top-0 left-0 pointer-events-none overflow-visible z-5"
+      className="absolute top-0 left-0 pointer-events-none overflow-visible z-20"
       style={{
         width: totalWidth,
         height: totalHeight,
       }}
+      viewBox={`0 0 ${totalWidth} ${totalHeight}`}
+      preserveAspectRatio="none"
     >
+      <defs>
+        {dependencyPaths.map((path) => (
+          <marker
+            key={`marker-${path.dependency.id}`}
+            id={`arrow-${path.dependency.id}`}
+            markerWidth="10"
+            markerHeight="10"
+            refX="9"
+            refY="3"
+            orient="auto"
+            markerUnits="strokeWidth"
+          >
+            <path d="M0,0 L0,6 L9,3 z" fill={path.color} />
+          </marker>
+        ))}
+      </defs>
       {dependencyPaths.map((path, index) => (
         <DependencyPath
           key={path.dependency.id}
@@ -118,7 +136,7 @@ function DependencyPath({ dependency, fromX, fromY, toX, toY, color }: Dependenc
     // Control point offset for the curve
     const controlOffset = Math.abs(dx) / 3;
 
-    // If events are on the same row or close rows, use a simple arc
+    // If events are on the same row or close rows, use a simple line
     if (Math.abs(dy) < 20) {
       return `M ${fromX} ${fromY} L ${toX} ${toY}`;
     }
@@ -137,32 +155,19 @@ function DependencyPath({ dependency, fromX, fromY, toX, toY, color }: Dependenc
     `;
   }, [fromX, fromY, toX, toY]);
 
-  // Arrow marker
+  // Arrow marker ID
   const markerId = `arrow-${dependency.id}`;
 
   return (
-    <g className="pointer-events-auto cursor-pointer hover:opacity-80 transition-opacity">
-      <defs>
-        <marker
-          id={markerId}
-          markerWidth="10"
-          markerHeight="10"
-          refX="9"
-          refY="3"
-          orient="auto"
-          markerUnits="strokeWidth"
-        >
-          <path d="M0,0 L0,6 L9,3 z" fill={color} />
-        </marker>
-      </defs>
-
+    <g className="dependency-line">
       {/* Shadow/outline for better visibility */}
       <path
         d={path}
         fill="none"
-        stroke="rgba(0,0,0,0.3)"
-        strokeWidth="4"
+        stroke="rgba(0,0,0,0.5)"
+        strokeWidth="5"
         strokeLinecap="round"
+        className="pointer-events-none"
       />
 
       {/* Main line */}
@@ -170,9 +175,10 @@ function DependencyPath({ dependency, fromX, fromY, toX, toY, color }: Dependenc
         d={path}
         fill="none"
         stroke={color}
-        strokeWidth="2"
+        strokeWidth="2.5"
         strokeLinecap="round"
         markerEnd={`url(#${markerId})`}
+        className="pointer-events-none"
       />
 
       {/* Invisible wider path for easier hover detection */}
@@ -180,12 +186,12 @@ function DependencyPath({ dependency, fromX, fromY, toX, toY, color }: Dependenc
         d={path}
         fill="none"
         stroke="transparent"
-        strokeWidth="12"
+        strokeWidth="15"
         strokeLinecap="round"
-        style={{ pointerEvents: 'stroke' }}
+        className="pointer-events-auto cursor-pointer hover:stroke-white/10 transition-all"
       >
         <title>
-          {dependency.type.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+          {dependency.type.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
           {dependency.lag ? ` (${dependency.lag}h lag)` : ''}
         </title>
       </path>

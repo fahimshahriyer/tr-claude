@@ -36,8 +36,7 @@ export function EnterpriseScheduler({
 }
 
 function SchedulerInner({ className }: { className: string }) {
-  const { state, config, dispatch } = useScheduler();
-  const timelinePanelRef = useRef<HTMLDivElement>(null);
+  const { state, config, dispatch, scrollContainerRef } = useScheduler();
   const [scrollTop, setScrollTop] = useState(0);
   const [scrollLeft, setScrollLeft] = useState(0);
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
@@ -63,40 +62,64 @@ function SchedulerInner({ className }: { className: string }) {
       // Zoom with Ctrl/Cmd + wheel - prevent browser zoom
       e.preventDefault();
       e.stopPropagation();
-      if (e.deltaY < 0) {
-        dispatch({ type: 'ZOOM_IN' });
-      } else {
-        dispatch({ type: 'ZOOM_OUT' });
+
+      // Store the current center position before zoom
+      if (scrollContainerRef.current) {
+        const container = scrollContainerRef.current;
+        const containerWidth = container.clientWidth;
+        const centerScrollLeft = container.scrollLeft + containerWidth / 2;
+
+        // Calculate what time is at the center
+        const { timeAxis, zoomLevel } = state;
+        const centerTime = timeAxis.startDate.getTime() +
+          (centerScrollLeft / timeAxis.cellWidth) * zoomLevel.tickSize;
+
+        // Perform zoom
+        if (e.deltaY < 0) {
+          dispatch({ type: 'ZOOM_IN' });
+        } else {
+          dispatch({ type: 'ZOOM_OUT' });
+        }
+
+        // After zoom, adjust scroll to keep the same time at center
+        setTimeout(() => {
+          const newZoomLevel = state.zoomLevel;
+          const newCenterPixel =
+            ((centerTime - timeAxis.startDate.getTime()) / newZoomLevel.tickSize) *
+            timeAxis.cellWidth;
+          const newScrollLeft = Math.max(0, newCenterPixel - containerWidth / 2);
+          container.scrollLeft = newScrollLeft;
+        }, 0);
       }
       return false;
     } else if (e.shiftKey) {
       // Horizontal scroll with Shift + wheel
       e.preventDefault();
-      if (timelinePanelRef.current) {
-        timelinePanelRef.current.scrollLeft += e.deltaY;
+      if (scrollContainerRef.current) {
+        scrollContainerRef.current.scrollLeft += e.deltaY;
       }
     }
-  }, [dispatch]);
+  }, [dispatch, state, scrollContainerRef]);
 
   // Prevent browser zoom on timeline area
   useEffect(() => {
     const handleWheelCapture = (e: WheelEvent) => {
-      if ((e.ctrlKey || e.metaKey) && timelinePanelRef.current?.contains(e.target as Node)) {
+      if ((e.ctrlKey || e.metaKey) && scrollContainerRef.current?.contains(e.target as Node)) {
         e.preventDefault();
       }
     };
 
     document.addEventListener('wheel', handleWheelCapture, { passive: false });
     return () => document.removeEventListener('wheel', handleWheelCapture);
-  }, []);
+  }, [scrollContainerRef]);
 
   // Measure container size
   useEffect(() => {
     const updateSize = () => {
-      if (timelinePanelRef.current) {
+      if (scrollContainerRef.current) {
         setContainerSize({
-          width: timelinePanelRef.current.clientWidth,
-          height: timelinePanelRef.current.clientHeight,
+          width: scrollContainerRef.current.clientWidth,
+          height: scrollContainerRef.current.clientHeight,
         });
       }
     };
@@ -251,7 +274,7 @@ function SchedulerInner({ className }: { className: string }) {
         <div className="flex-1 flex flex-col overflow-hidden">
           {/* Timeline panel with events */}
           <div
-            ref={timelinePanelRef}
+            ref={scrollContainerRef}
             className="flex-1 overflow-auto"
             onScroll={handleScroll}
             onWheel={handleWheel}
