@@ -25,6 +25,23 @@ export function TaskBar({
 
   const isSelected = selection.selectedTaskIds.includes(task.id);
 
+  // Check if task is on critical path
+  const isCritical =
+    state.showCriticalPath &&
+    state.criticalPathSchedules?.get(task.id)?.isCritical;
+
+  // Determine task color based on critical path
+  const getTaskColor = () => {
+    if (isCritical) {
+      // Critical tasks are red
+      return task.type === 'milestone' ? '#ef4444' : '#dc2626';
+    }
+    // Use default task colors
+    return task.color || (task.type === 'milestone' ? '#14b8a6' : task.type === 'summary' ? '#3b82f6' : '#10b981');
+  };
+
+  const taskColor = getTaskColor();
+
   // Calculate position and width
   const { left, width } = useMemo(() => {
     const dayInMs = 24 * 60 * 60 * 1000;
@@ -229,9 +246,10 @@ export function TaskBar({
           className={`
             w-4 h-4 rotate-45 transition-all
             ${isSelected ? 'ring-2 ring-blue-400 ring-offset-2 ring-offset-slate-900' : ''}
+            ${isCritical ? 'ring-2 ring-red-500 ring-offset-1 ring-offset-slate-900' : ''}
           `}
-          style={{ backgroundColor: task.color || '#14b8a6' }}
-          title={`${task.name} - ${task.startDate.toLocaleDateString()}`}
+          style={{ backgroundColor: taskColor }}
+          title={`${task.name} - ${task.startDate.toLocaleDateString()}${isCritical ? ' (Critical)' : ''}`}
           onMouseDown={handleMouseDownMove}
         />
       </div>
@@ -261,31 +279,33 @@ export function TaskBar({
           className={`
             relative h-full transition-all
             ${isSelected ? 'ring-2 ring-blue-400 ring-offset-1 ring-offset-slate-900 rounded' : ''}
+            ${isCritical ? 'ring-2 ring-red-500 ring-offset-1 ring-offset-slate-900 rounded' : ''}
           `}
           onMouseDown={handleMouseDownMove}
+          title={`${task.name}${isCritical ? ' (Critical)' : ''}`}
         >
           {/* Top bracket */}
           <div
             className="absolute top-0 left-0 right-0 h-1 pointer-events-none"
-            style={{ backgroundColor: task.color || '#3b82f6' }}
+            style={{ backgroundColor: taskColor }}
           />
 
           {/* Left edge */}
           <div
             className="absolute top-0 left-0 bottom-0 w-1 pointer-events-none"
-            style={{ backgroundColor: task.color || '#3b82f6' }}
+            style={{ backgroundColor: taskColor }}
           />
 
           {/* Right edge */}
           <div
             className="absolute top-0 right-0 bottom-0 w-1 pointer-events-none"
-            style={{ backgroundColor: task.color || '#3b82f6' }}
+            style={{ backgroundColor: taskColor }}
           />
 
           {/* Bottom bracket */}
           <div
             className="absolute bottom-0 left-0 right-0 h-1 pointer-events-none"
-            style={{ backgroundColor: task.color || '#3b82f6' }}
+            style={{ backgroundColor: taskColor }}
           />
 
           {/* Task name */}
@@ -321,12 +341,14 @@ export function TaskBar({
         className={`
           relative h-full rounded transition-all overflow-hidden
           ${isSelected ? 'ring-2 ring-blue-400 ring-offset-1 ring-offset-slate-900' : ''}
+          ${isCritical ? 'ring-2 ring-red-500 ring-offset-1 ring-offset-slate-900' : ''}
           hover:brightness-110
         `}
         style={{
-          background: `linear-gradient(to right, ${task.color || '#10b981'} ${task.progress}%, ${task.color || '#10b981'}40 ${task.progress}%)`,
+          background: `linear-gradient(to right, ${taskColor} ${task.progress}%, ${taskColor}40 ${task.progress}%)`,
         }}
         onMouseDown={handleMouseDownMove}
+        title={`${task.name}${isCritical ? ' (Critical)' : ''}`}
       >
         {/* Task name */}
         <div className="absolute inset-0 flex items-center px-2 pointer-events-none">

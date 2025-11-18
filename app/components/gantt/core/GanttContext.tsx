@@ -10,6 +10,7 @@ import {
   DEFAULT_CALENDAR,
   DEFAULT_ZOOM_LEVELS,
 } from './types';
+import { calculateCriticalPath } from './criticalPath';
 
 // Action types
 type GanttAction =
@@ -28,7 +29,8 @@ type GanttAction =
   | { type: 'UPDATE_DRAG'; payload: { currentX: number; currentY: number; ghostTask: GanttTask } }
   | { type: 'END_DRAG' }
   | { type: 'CANCEL_DRAG' }
-  | { type: 'TOGGLE_CALENDAR' };
+  | { type: 'TOGGLE_CALENDAR' }
+  | { type: 'TOGGLE_CRITICAL_PATH' };
 
 // Reducer
 function ganttReducer(state: GanttState, action: GanttAction): GanttState {
@@ -220,6 +222,22 @@ function ganttReducer(state: GanttState, action: GanttAction): GanttState {
         useCalendar: !state.useCalendar,
       };
 
+    case 'TOGGLE_CRITICAL_PATH': {
+      const newShowCriticalPath = !state.showCriticalPath;
+      let schedules = state.criticalPathSchedules;
+
+      // Calculate critical path if enabling and not yet calculated
+      if (newShowCriticalPath && !schedules) {
+        schedules = calculateCriticalPath(state.tasks, state.dependencies);
+      }
+
+      return {
+        ...state,
+        showCriticalPath: newShowCriticalPath,
+        criticalPathSchedules: schedules,
+      };
+    }
+
     default:
       return state;
   }
@@ -287,6 +305,7 @@ export function GanttProvider({
       },
       baselines: [],
       showCriticalPath: false,
+      criticalPathSchedules: null,
       showBaseline: false,
       autoSchedule: false,
       useCalendar: false,

@@ -52,6 +52,10 @@ function GanttInner({ className }: { className: string }) {
     dispatch({ type: 'TOGGLE_CALENDAR' });
   };
 
+  const handleToggleCriticalPath = () => {
+    dispatch({ type: 'TOGGLE_CRITICAL_PATH' });
+  };
+
   // Sync vertical scroll between tree and timeline
   const handleTreeScroll = (e: React.UIEvent<HTMLDivElement>) => {
     if (timelineScrollRef.current) {
@@ -136,6 +140,17 @@ function GanttInner({ className }: { className: string }) {
           </span>
         </div>
         <div className="ml-auto flex items-center gap-2">
+          <button
+            onClick={handleToggleCriticalPath}
+            className={`px-3 py-1 text-white text-sm rounded transition-colors ${
+              state.showCriticalPath
+                ? 'bg-red-600 hover:bg-red-700'
+                : 'bg-slate-700 hover:bg-slate-600'
+            }`}
+            title="Toggle Critical Path highlighting"
+          >
+            {state.showCriticalPath ? '🔴 Critical Path' : '⚪ Critical Path'}
+          </button>
           <button
             onClick={handleToggleCalendar}
             className={`px-3 py-1 text-white text-sm rounded transition-colors ${
