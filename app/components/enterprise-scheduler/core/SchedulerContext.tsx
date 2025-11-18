@@ -512,21 +512,6 @@ export function SchedulerProvider({
     }
   }, [state, scrollContainerRef]);
 
-  const navigateToToday = useCallback(() => {
-    // Just scroll to today's position without changing the time range
-    // This preserves the current zoom level and time range
-    const today = new Date();
-    scrollToDate(today);
-  }, [scrollToDate]);
-
-  const navigateToDate = useCallback((date: Date) => {
-    dispatch({ type: 'NAVIGATE_TO_DATE', payload: date });
-    // Scroll to the date's position after a short delay
-    setTimeout(() => {
-      scrollToDate(date);
-    }, 0);
-  }, []);
-
   const scrollToDate = useCallback((date: Date) => {
     if (!scrollContainerRef.current) return;
 
@@ -556,6 +541,21 @@ export function SchedulerProvider({
       behavior: 'smooth',
     });
   }, []);
+
+  const navigateToToday = useCallback(() => {
+    // Just scroll to today's position without changing the time range
+    // This preserves the current zoom level and time range
+    const today = new Date();
+    scrollToDate(today);
+  }, [scrollToDate]);
+
+  const navigateToDate = useCallback((date: Date) => {
+    dispatch({ type: 'NAVIGATE_TO_DATE', payload: date });
+    // Scroll to the date's position after a short delay
+    setTimeout(() => {
+      scrollToDate(date);
+    }, 0);
+  }, [scrollToDate]);
 
   const value: SchedulerContextValue = {
     state,

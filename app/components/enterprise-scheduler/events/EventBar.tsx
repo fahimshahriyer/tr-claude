@@ -30,6 +30,7 @@ export function EventBar({
 
   const handleMouseDown = useCallback(
     (e: React.MouseEvent) => {
+      e.preventDefault();
       e.stopPropagation();
 
       // Select event
@@ -53,6 +54,7 @@ export function EventBar({
 
   const handleResizeStart = useCallback(
     (e: React.MouseEvent) => {
+      e.preventDefault();
       e.stopPropagation();
       selectEvent(event.id);
       if (onDragStart) {
@@ -64,6 +66,7 @@ export function EventBar({
 
   const handleResizeEnd = useCallback(
     (e: React.MouseEvent) => {
+      e.preventDefault();
       e.stopPropagation();
       selectEvent(event.id);
       if (onDragStart) {

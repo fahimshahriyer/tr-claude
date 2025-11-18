@@ -90,25 +90,33 @@ export function DependencyLines({ scrollLeft, scrollTop, rowHeight }: Dependency
         height: totalHeight,
       }}
       viewBox={`0 0 ${totalWidth} ${totalHeight}`}
-      preserveAspectRatio="none"
+      preserveAspectRatio="xMidYMid meet"
     >
       <defs>
-        {dependencyPaths.map((path) => (
-          <marker
-            key={`marker-${path.dependency.id}`}
-            id={`arrow-${path.dependency.id}`}
-            markerWidth="10"
-            markerHeight="10"
-            refX="9"
-            refY="3"
-            orient="auto"
-            markerUnits="strokeWidth"
-          >
-            <path d="M0,0 L0,6 L9,3 z" fill={path.color} />
-          </marker>
-        ))}
+        {/* Modern arrow marker */}
+        <marker
+          id="arrowhead"
+          viewBox="0 0 10 10"
+          refX="9"
+          refY="5"
+          markerWidth="6"
+          markerHeight="6"
+          orient="auto"
+        >
+          <path
+            d="M 0 0 L 10 5 L 0 10 L 3 5 z"
+            fill="currentColor"
+            className="transition-colors"
+          />
+        </marker>
+
+        {/* Gradient for modern look */}
+        <linearGradient id="dependencyGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stopColor="currentColor" stopOpacity="0.6" />
+          <stop offset="100%" stopColor="currentColor" stopOpacity="1" />
+        </linearGradient>
       </defs>
-      {dependencyPaths.map((path, index) => (
+      {dependencyPaths.map((path) => (
         <DependencyPath
           key={path.dependency.id}
           {...path}
@@ -129,69 +137,94 @@ interface DependencyPathProps {
 
 function DependencyPath({ dependency, fromX, fromY, toX, toY, color }: DependencyPathProps) {
   const path = useMemo(() => {
-    // Create a smooth curved path between the two points
     const dx = toX - fromX;
     const dy = toY - fromY;
+    const absDx = Math.abs(dx);
+    const absDy = Math.abs(dy);
 
-    // Control point offset for the curve
-    const controlOffset = Math.abs(dx) / 3;
-
-    // If events are on the same row or close rows, use a simple line
-    if (Math.abs(dy) < 20) {
-      return `M ${fromX} ${fromY} L ${toX} ${toY}`;
+    // For same row or very close rows, use a gentle arc
+    if (absDy < 5) {
+      const controlOffset = Math.min(absDx * 0.25, 60);
+      return `M ${fromX} ${fromY} C ${fromX + controlOffset} ${fromY}, ${toX - controlOffset} ${toY}, ${toX} ${toY}`;
     }
 
-    // Otherwise create a smooth S-curve
-    const midX = fromX + dx / 2;
+    // Calculate control points for smooth bezier curves
+    // Use horizontal offset that's proportional to distance but capped
+    const horizontalOffset = Math.min(Math.max(absDx * 0.4, 40), 120);
 
-    return `
-      M ${fromX} ${fromY}
-      C ${fromX + controlOffset} ${fromY},
-        ${midX - controlOffset} ${fromY},
-        ${midX} ${fromY + dy / 2}
-      C ${midX + controlOffset} ${fromY + dy / 2},
-        ${toX - controlOffset} ${toY},
-        ${toX} ${toY}
-    `;
+    // For forward connections (left to right)
+    if (dx > 0) {
+      // Simple smooth curve when going forward
+      const cp1x = fromX + horizontalOffset;
+      const cp1y = fromY;
+      const cp2x = toX - horizontalOffset;
+      const cp2y = toY;
+
+      return `M ${fromX} ${fromY} C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${toX} ${toY}`;
+    }
+    // For backward connections (right to left) - need S-curve
+    else {
+      // Go out horizontally first, then curve down/up, then approach target
+      const outOffset = 40;
+      const midX = (fromX + toX) / 2;
+      const midY = (fromY + toY) / 2;
+
+      // Create an S-curve that goes around obstacles
+      const cp1x = fromX + outOffset;
+      const cp1y = fromY;
+      const cp2x = fromX + outOffset;
+      const cp2y = midY;
+      const cp3x = toX - outOffset;
+      const cp3y = midY;
+      const cp4x = toX - outOffset;
+      const cp4y = toY;
+
+      return `M ${fromX} ${fromY}
+              C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${midX} ${midY}
+              C ${cp3x} ${cp3y}, ${cp4x} ${cp4y}, ${toX} ${toY}`;
+    }
   }, [fromX, fromY, toX, toY]);
 
-  // Arrow marker ID
-  const markerId = `arrow-${dependency.id}`;
-
   return (
-    <g className="dependency-line">
-      {/* Shadow/outline for better visibility */}
-      <path
-        d={path}
-        fill="none"
-        stroke="rgba(0,0,0,0.5)"
-        strokeWidth="5"
-        strokeLinecap="round"
-        className="pointer-events-none"
-      />
-
-      {/* Main line */}
+    <g className="dependency-line" style={{ color }}>
+      {/* Subtle glow effect */}
       <path
         d={path}
         fill="none"
         stroke={color}
-        strokeWidth="2.5"
+        strokeWidth="8"
         strokeLinecap="round"
-        markerEnd={`url(#${markerId})`}
+        strokeLinejoin="round"
+        opacity="0.15"
         className="pointer-events-none"
+        filter="blur(4px)"
       />
 
-      {/* Invisible wider path for easier hover detection */}
+      {/* Main line with gradient */}
+      <path
+        d={path}
+        fill="none"
+        stroke={color}
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        markerEnd="url(#arrowhead)"
+        className="pointer-events-none transition-all"
+        opacity="0.9"
+      />
+
+      {/* Invisible wider path for easier hover/click detection */}
       <path
         d={path}
         fill="none"
         stroke="transparent"
-        strokeWidth="15"
+        strokeWidth="20"
         strokeLinecap="round"
-        className="pointer-events-auto cursor-pointer hover:stroke-white/10 transition-all"
+        strokeLinejoin="round"
+        className="pointer-events-auto cursor-pointer"
       >
         <title>
-          {dependency.type.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+          {dependency.type.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' to ')}
           {dependency.lag ? ` (${dependency.lag}h lag)` : ''}
         </title>
       </path>
