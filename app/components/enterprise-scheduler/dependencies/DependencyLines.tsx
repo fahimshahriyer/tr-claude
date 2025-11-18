@@ -153,20 +153,19 @@ export function DependencyLines({ scrollLeft, scrollTop, rowHeight }: Dependency
       preserveAspectRatio="xMidYMid meet"
     >
       <defs>
-        {/* Modern arrow marker */}
+        {/* Simple triangle arrowhead */}
         <marker
           id="arrowhead"
           viewBox="0 0 10 10"
-          refX="9"
+          refX="10"
           refY="5"
-          markerWidth="6"
-          markerHeight="6"
+          markerWidth="4"
+          markerHeight="4"
           orient="auto"
         >
           <path
-            d="M 0 0 L 10 5 L 0 10 L 3 5 z"
+            d="M 0 0 L 10 5 L 0 10 z"
             fill="currentColor"
-            className="transition-colors"
           />
         </marker>
 
@@ -219,23 +218,28 @@ function DependencyPath({ dependency, fromX, fromY, toX, toY, color }: Dependenc
         (fromPort === 'bottom' && toPort === 'top' && dy > 0) || // downward
         (fromPort === 'top' && toPort === 'bottom' && dy < 0);   // upward
 
-      // If natural vertical flow and reasonably aligned horizontally, draw simple straight line
-      if (isNaturalVerticalFlow && Math.abs(dx) < 60) {
+      // If natural vertical flow and perfectly aligned horizontally, draw simple straight line
+      if (isNaturalVerticalFlow && Math.abs(dx) < 10) {
         return `M ${fromX} ${fromY} L ${toX} ${toY}`;
       }
 
-      // For other vertical-to-vertical connections or when horizontally separated,
-      // use elbow routing through the space between tasks
+      // For vertical connections, always use elbow routing to ensure arrowhead points vertically
       const fromDir = fromPort === 'top' ? -1 : 1;
       const toDir = toPort === 'top' ? -1 : 1;
 
-      // If tasks are close vertically but offset horizontally, just route between them
+      // If tasks are close vertically, use small offsets for compact elbow
       if (Math.abs(dy) < verticalOffset * 2) {
+        const smallOffset = 15; // Small offset for compact elbows
+        const outY = fromY + (fromDir * smallOffset);
+        const inY = toY + (toDir * smallOffset);
         const midX = fromX + (dx / 2);
-        const midY = fromY + (dy / 2);
 
+        // Proper elbow: vertical out -> horizontal -> vertical in
         return `M ${fromX} ${fromY}
-                L ${midX} ${midY}
+                L ${fromX} ${outY}
+                L ${midX} ${outY}
+                L ${midX} ${inY}
+                L ${toX} ${inY}
                 L ${toX} ${toY}`;
       }
 
