@@ -4,6 +4,7 @@ import React, { useMemo } from 'react';
 import { useGantt } from '../core/GanttContext';
 import { TimeAxis } from './TimeAxis';
 import { TaskBar } from './TaskBar';
+import { DependencyLines } from '../dependencies/DependencyLines';
 import { GanttTask } from '../core/types';
 
 interface TimelineProps {
@@ -114,6 +115,14 @@ export function Timeline({ scrollRef, onScroll }: TimelineProps) {
               />
             ))}
           </svg>
+
+          {/* Dependency Lines */}
+          <DependencyLines
+            visibleTasks={visibleTasks}
+            timelineStart={timelineStart}
+            zoomLevel={zoomLevel}
+            rowHeight={rowHeight}
+          />
 
           {/* Task Bars */}
           {visibleTasks.map((task, index) => (
