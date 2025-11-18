@@ -23,7 +23,12 @@ type GanttAction =
   | { type: 'CLEAR_SELECTION' }
   | { type: 'SET_ZOOM'; payload: string }
   | { type: 'ZOOM_IN' }
-  | { type: 'ZOOM_OUT' };
+  | { type: 'ZOOM_OUT' }
+  | { type: 'START_DRAG'; payload: { taskId: string; dragType: 'move' | 'resize-start' | 'resize-end'; startX: number; startY: number } }
+  | { type: 'UPDATE_DRAG'; payload: { currentX: number; currentY: number; ghostTask: GanttTask } }
+  | { type: 'END_DRAG' }
+  | { type: 'CANCEL_DRAG' }
+  | { type: 'TOGGLE_CALENDAR' };
 
 // Reducer
 function ganttReducer(state: GanttState, action: GanttAction): GanttState {
@@ -121,6 +126,100 @@ function ganttReducer(state: GanttState, action: GanttAction): GanttState {
         zoomLevel: DEFAULT_ZOOM_LEVELS.find((z) => z.id === action.payload) || state.zoomLevel,
       };
 
+    case 'START_DRAG': {
+      const originalTask = state.tasks.find((t) => t.id === action.payload.taskId);
+      return {
+        ...state,
+        dragState: {
+          isDragging: true,
+          taskId: action.payload.taskId,
+          dragType: action.payload.dragType,
+          startX: action.payload.startX,
+          startY: action.payload.startY,
+          currentX: action.payload.startX,
+          currentY: action.payload.startY,
+          originalTask: originalTask || null,
+          ghostTask: originalTask || null,
+        },
+      };
+    }
+
+    case 'UPDATE_DRAG':
+      return {
+        ...state,
+        dragState: {
+          ...state.dragState,
+          currentX: action.payload.currentX,
+          currentY: action.payload.currentY,
+          ghostTask: action.payload.ghostTask,
+        },
+      };
+
+    case 'END_DRAG': {
+      if (state.dragState.ghostTask && state.dragState.taskId) {
+        return {
+          ...state,
+          tasks: state.tasks.map((t) =>
+            t.id === state.dragState.taskId
+              ? {
+                  ...t,
+                  startDate: state.dragState.ghostTask!.startDate,
+                  endDate: state.dragState.ghostTask!.endDate,
+                  duration: state.dragState.ghostTask!.duration,
+                }
+              : t
+          ),
+          dragState: {
+            isDragging: false,
+            taskId: null,
+            dragType: null,
+            startX: 0,
+            startY: 0,
+            currentX: 0,
+            currentY: 0,
+            originalTask: null,
+            ghostTask: null,
+          },
+        };
+      }
+      return {
+        ...state,
+        dragState: {
+          isDragging: false,
+          taskId: null,
+          dragType: null,
+          startX: 0,
+          startY: 0,
+          currentX: 0,
+          currentY: 0,
+          originalTask: null,
+          ghostTask: null,
+        },
+      };
+    }
+
+    case 'CANCEL_DRAG':
+      return {
+        ...state,
+        dragState: {
+          isDragging: false,
+          taskId: null,
+          dragType: null,
+          startX: 0,
+          startY: 0,
+          currentX: 0,
+          currentY: 0,
+          originalTask: null,
+          ghostTask: null,
+        },
+      };
+
+    case 'TOGGLE_CALENDAR':
+      return {
+        ...state,
+        useCalendar: !state.useCalendar,
+      };
+
     default:
       return state;
   }
@@ -190,6 +289,7 @@ export function GanttProvider({
       showCriticalPath: false,
       showBaseline: false,
       autoSchedule: false,
+      useCalendar: false,
       undoStack: [],
       redoStack: [],
     }),

@@ -135,6 +135,7 @@ export interface GanttState {
   showCriticalPath: boolean;
   showBaseline: boolean;
   autoSchedule: boolean;
+  useCalendar: boolean; // Whether to use calendar for date calculations
   undoStack: GanttState[];
   redoStack: GanttState[];
 }
