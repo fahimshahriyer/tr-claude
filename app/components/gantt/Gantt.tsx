@@ -5,6 +5,7 @@ import { GanttProvider, useGantt } from './core/GanttContext';
 import { GanttTask, GanttDependency, GanttColumn } from './core/types';
 import { TaskTree } from './tree/TaskTree';
 import { Timeline } from './timeline/Timeline';
+import { ContextMenu, ContextMenuItem } from './ui/ContextMenu';
 
 interface GanttProps {
   tasks?: GanttTask[];
@@ -211,6 +212,87 @@ function GanttInner({ className }: { className: string }) {
           }}
         />
       )}
+
+      {/* Context Menu */}
+      {state.contextMenu.isOpen && state.contextMenu.taskId && (() => {
+        const task = state.tasks.find(t => t.id === state.contextMenu.taskId);
+        if (!task) return null;
+
+        const menuItems: ContextMenuItem[] = [
+          {
+            label: 'Edit Task',
+            icon: '✏️',
+            onClick: () => {
+              // TODO: Open edit modal
+              console.log('Edit task:', task.id);
+            },
+          },
+          {
+            label: task.type === 'milestone' ? 'Convert to Task' : 'Convert to Milestone',
+            icon: task.type === 'milestone' ? '📊' : '💎',
+            onClick: () => {
+              dispatch({
+                type: 'UPDATE_TASK',
+                payload: {
+                  id: task.id,
+                  updates: {
+                    type: task.type === 'milestone' ? 'task' : 'milestone',
+                  },
+                },
+              });
+            },
+          },
+          {
+            label: task.expanded ? 'Collapse' : 'Expand',
+            icon: task.expanded ? '➖' : '➕',
+            onClick: () => {
+              dispatch({
+                type: task.expanded ? 'COLLAPSE_TASK' : 'EXPAND_TASK',
+                payload: task.id,
+              });
+            },
+            disabled: !task.children || task.children.length === 0,
+          },
+          { divider: true } as ContextMenuItem,
+          {
+            label: 'Set Progress',
+            icon: '📈',
+            onClick: () => {
+              const newProgress = prompt('Enter progress (0-100):', task.progress.toString());
+              if (newProgress !== null) {
+                const progress = Math.min(100, Math.max(0, parseInt(newProgress, 10) || 0));
+                dispatch({
+                  type: 'UPDATE_TASK',
+                  payload: {
+                    id: task.id,
+                    updates: { progress },
+                  },
+                });
+              }
+            },
+          },
+          { divider: true } as ContextMenuItem,
+          {
+            label: 'Delete Task',
+            icon: '🗑️',
+            danger: true,
+            onClick: () => {
+              if (confirm(`Delete task "${task.name}"?`)) {
+                dispatch({ type: 'DELETE_TASK', payload: task.id });
+              }
+            },
+          },
+        ];
+
+        return (
+          <ContextMenu
+            x={state.contextMenu.x}
+            y={state.contextMenu.y}
+            items={menuItems}
+            onClose={() => dispatch({ type: 'CLOSE_CONTEXT_MENU' })}
+          />
+        );
+      })()}
     </div>
   );
 }

@@ -29,6 +29,18 @@ export function TaskRow({ task, columns }: TaskRowProps) {
     }
   };
 
+  const handleContextMenu = (e: React.MouseEvent) => {
+    e.preventDefault();
+    dispatch({
+      type: 'OPEN_CONTEXT_MENU',
+      payload: {
+        x: e.clientX,
+        y: e.clientY,
+        taskId: task.id,
+      },
+    });
+  };
+
   return (
     <div
       className={`
@@ -37,6 +49,7 @@ export function TaskRow({ task, columns }: TaskRowProps) {
         ${isSelected ? 'bg-blue-600/20 border-l-4 border-l-blue-500' : ''}
       `}
       onClick={handleClick}
+      onContextMenu={handleContextMenu}
     >
       {columns.map((column, index) => (
         <div

@@ -30,7 +30,9 @@ type GanttAction =
   | { type: 'END_DRAG' }
   | { type: 'CANCEL_DRAG' }
   | { type: 'TOGGLE_CALENDAR' }
-  | { type: 'TOGGLE_CRITICAL_PATH' };
+  | { type: 'TOGGLE_CRITICAL_PATH' }
+  | { type: 'OPEN_CONTEXT_MENU'; payload: { x: number; y: number; taskId: string } }
+  | { type: 'CLOSE_CONTEXT_MENU' };
 
 // Reducer
 function ganttReducer(state: GanttState, action: GanttAction): GanttState {
@@ -238,6 +240,28 @@ function ganttReducer(state: GanttState, action: GanttAction): GanttState {
       };
     }
 
+    case 'OPEN_CONTEXT_MENU':
+      return {
+        ...state,
+        contextMenu: {
+          isOpen: true,
+          x: action.payload.x,
+          y: action.payload.y,
+          taskId: action.payload.taskId,
+        },
+      };
+
+    case 'CLOSE_CONTEXT_MENU':
+      return {
+        ...state,
+        contextMenu: {
+          isOpen: false,
+          x: 0,
+          y: 0,
+          taskId: null,
+        },
+      };
+
     default:
       return state;
   }
@@ -302,6 +326,12 @@ export function GanttProvider({
         currentY: 0,
         originalTask: null,
         ghostTask: null,
+      },
+      contextMenu: {
+        isOpen: false,
+        x: 0,
+        y: 0,
+        taskId: null,
       },
       baselines: [],
       showCriticalPath: false,

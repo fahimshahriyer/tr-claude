@@ -58,6 +58,18 @@ export function TaskBar({
     dispatch({ type: 'SELECT_TASK', payload: task.id });
   };
 
+  const handleContextMenu = (e: React.MouseEvent) => {
+    e.preventDefault();
+    dispatch({
+      type: 'OPEN_CONTEXT_MENU',
+      payload: {
+        x: e.clientX,
+        y: e.clientY,
+        taskId: task.id,
+      },
+    });
+  };
+
   // Calculate dates from pixel position
   const calculateDateFromX = useCallback(
     (x: number): Date => {
@@ -241,6 +253,7 @@ export function TaskBar({
           height: 16,
         }}
         onClick={handleClick}
+        onContextMenu={handleContextMenu}
       >
         <div
           className={`
@@ -273,6 +286,7 @@ export function TaskBar({
           height: rowHeight - 16,
         }}
         onClick={handleClick}
+        onContextMenu={handleContextMenu}
       >
         {/* Summary bracket bar */}
         <div
@@ -336,6 +350,7 @@ export function TaskBar({
         height: rowHeight - 16,
       }}
       onClick={handleClick}
+      onContextMenu={handleContextMenu}
     >
       <div
         className={`

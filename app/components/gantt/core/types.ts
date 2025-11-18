@@ -113,6 +113,13 @@ export interface SelectionState {
   anchorTaskId: string | null; // for shift-click range select
 }
 
+export interface ContextMenuState {
+  isOpen: boolean;
+  x: number;
+  y: number;
+  taskId: string | null;
+}
+
 export interface ViewportState {
   scrollLeft: number;
   scrollTop: number;
@@ -131,6 +138,7 @@ export interface GanttState {
   viewport: ViewportState;
   selection: SelectionState;
   dragState: DragState;
+  contextMenu: ContextMenuState;
   baselines: GanttBaseline[];
   showCriticalPath: boolean;
   criticalPathSchedules: Map<string, any> | null; // TaskSchedule map
