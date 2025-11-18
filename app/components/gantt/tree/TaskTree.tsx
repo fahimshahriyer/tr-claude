@@ -5,7 +5,12 @@ import { useGantt } from '../core/GanttContext';
 import { GanttTask } from '../core/types';
 import { TaskRow } from './TaskRow';
 
-export function TaskTree() {
+interface TaskTreeProps {
+  scrollRef?: React.RefObject<HTMLDivElement>;
+  onScroll?: (e: React.UIEvent<HTMLDivElement>) => void;
+}
+
+export function TaskTree({ scrollRef, onScroll }: TaskTreeProps) {
   const { state } = useGantt();
   const { tasks, columns } = state;
 
@@ -56,7 +61,11 @@ export function TaskTree() {
       </div>
 
       {/* Task Rows */}
-      <div className="flex-1 overflow-auto">
+      <div
+        ref={scrollRef}
+        className="flex-1 overflow-auto"
+        onScroll={onScroll}
+      >
         {visibleTasks.length === 0 ? (
           <div className="flex items-center justify-center h-full">
             <span className="text-slate-400 text-sm">No tasks</span>

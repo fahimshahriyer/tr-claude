@@ -6,7 +6,12 @@ import { TimeAxis } from './TimeAxis';
 import { TaskBar } from './TaskBar';
 import { GanttTask } from '../core/types';
 
-export function Timeline() {
+interface TimelineProps {
+  scrollRef?: React.RefObject<HTMLDivElement>;
+  onScroll?: (e: React.UIEvent<HTMLDivElement>) => void;
+}
+
+export function Timeline({ scrollRef, onScroll }: TimelineProps) {
   const { state } = useGantt();
   const { tasks, zoomLevel } = state;
 
@@ -65,7 +70,11 @@ export function Timeline() {
       </div>
 
       {/* Timeline Grid + Task Bars */}
-      <div className="flex-1 overflow-auto relative">
+      <div
+        ref={scrollRef}
+        className="flex-1 overflow-auto relative"
+        onScroll={onScroll}
+      >
         <div
           className="relative"
           style={{
