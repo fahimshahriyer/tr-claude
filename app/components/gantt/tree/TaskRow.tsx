@@ -11,7 +11,7 @@ interface TaskRowProps {
 
 export function TaskRow({ task, columns }: TaskRowProps) {
   const { state, dispatch } = useGantt();
-  const { selection } = state;
+  const { selection, inlineEdit } = state;
 
   const isSelected = selection.selectedTaskIds.includes(task.id);
   const hasChildren = task.children && task.children.length > 0;
@@ -41,6 +41,33 @@ export function TaskRow({ task, columns }: TaskRowProps) {
     });
   };
 
+  const handleCellDoubleClick = (e: React.MouseEvent, field: keyof GanttTask) => {
+    e.stopPropagation();
+
+    // Don't allow editing certain fields
+    if (field === 'children' || field === 'level' || field === 'parentId' || field === 'expanded' || field === 'id') {
+      return;
+    }
+
+    const value = task[field];
+    let stringValue = '';
+
+    if (value instanceof Date) {
+      stringValue = value.toISOString().split('T')[0];
+    } else if (typeof value === 'number' || typeof value === 'string') {
+      stringValue = String(value);
+    }
+
+    dispatch({
+      type: 'START_INLINE_EDIT',
+      payload: {
+        taskId: task.id,
+        field,
+        value: stringValue,
+      },
+    });
+  };
+
   return (
     <div
       className={`
@@ -51,60 +78,128 @@ export function TaskRow({ task, columns }: TaskRowProps) {
       onClick={handleClick}
       onContextMenu={handleContextMenu}
     >
-      {columns.map((column, index) => (
-        <div
-          key={column.id}
-          className="px-3 text-slate-200 text-sm flex items-center border-r border-slate-600/30"
-          style={{ width: column.width }}
-        >
-          {/* First column includes hierarchy controls */}
-          {index === 0 && (
-            <>
-              {/* Indentation */}
-              <div style={{ width: task.level * 20 }} />
+      {columns.map((column, index) => {
+        const field = column.field as keyof GanttTask;
+        const isBeingEdited = inlineEdit.isEditing && inlineEdit.taskId === task.id && inlineEdit.field === field;
 
-              {/* Expand/collapse chevron */}
-              {hasChildren ? (
-                <button
-                  onClick={handleExpandCollapse}
-                  className="mr-2 w-4 h-4 flex items-center justify-center text-slate-400 hover:text-white transition-colors"
-                >
-                  {task.expanded ? (
-                    <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                      <path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" />
-                    </svg>
-                  ) : (
-                    <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                      <path d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" />
+        return (
+          <div
+            key={column.id}
+            className="px-3 text-slate-200 text-sm flex items-center border-r border-slate-600/30"
+            style={{ width: column.width }}
+            onDoubleClick={(e) => handleCellDoubleClick(e, field)}
+          >
+            {/* First column includes hierarchy controls */}
+            {index === 0 && (
+              <>
+                {/* Indentation */}
+                <div style={{ width: task.level * 20 }} />
+
+                {/* Expand/collapse chevron */}
+                {hasChildren ? (
+                  <button
+                    onClick={handleExpandCollapse}
+                    className="mr-2 w-4 h-4 flex items-center justify-center text-slate-400 hover:text-white transition-colors"
+                  >
+                    {task.expanded ? (
+                      <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" />
+                      </svg>
+                    ) : (
+                      <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" />
+                      </svg>
+                    )}
+                  </button>
+                ) : (
+                  <div className="w-6" />
+                )}
+
+                {/* Task type icon */}
+                <div className="mr-2 w-4 h-4 flex items-center justify-center">
+                  {task.type === 'milestone' && (
+                    <div className="w-2 h-2 bg-teal-500 rotate-45" title="Milestone" />
+                  )}
+                  {task.type === 'summary' && (
+                    <svg className="w-4 h-4 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
+                      <path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z" />
                     </svg>
                   )}
-                </button>
-              ) : (
-                <div className="w-6" />
-              )}
+                  {task.type === 'task' && (
+                    <div className="w-3 h-3 border-2 border-slate-400 rounded-sm" title="Task" />
+                  )}
+                </div>
+              </>
+            )}
 
-              {/* Task type icon */}
-              <div className="mr-2 w-4 h-4 flex items-center justify-center">
-                {task.type === 'milestone' && (
-                  <div className="w-2 h-2 bg-teal-500 rotate-45" title="Milestone" />
-                )}
-                {task.type === 'summary' && (
-                  <svg className="w-4 h-4 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
-                    <path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z" />
-                  </svg>
-                )}
-                {task.type === 'task' && (
-                  <div className="w-3 h-3 border-2 border-slate-400 rounded-sm" title="Task" />
-                )}
-              </div>
-            </>
-          )}
-
-          {/* Cell content */}
-          {renderCellContent(column, task)}
-        </div>
-      ))}
+            {/* Cell content or inline edit input */}
+            {isBeingEdited ? (
+              <InlineEditInput
+                value={inlineEdit.value}
+                field={field}
+                onChange={(value) => dispatch({ type: 'UPDATE_INLINE_EDIT', payload: value })}
+                onSave={() => dispatch({ type: 'SAVE_INLINE_EDIT' })}
+                onCancel={() => dispatch({ type: 'CANCEL_INLINE_EDIT' })}
+              />
+            ) : (
+              renderCellContent(column, task)
+            )}
+          </div>
+        );
+      })}
     </div>
+  );
+}
+
+interface InlineEditInputProps {
+  value: string;
+  field: keyof GanttTask;
+  onChange: (value: string) => void;
+  onSave: () => void;
+  onCancel: () => void;
+}
+
+function InlineEditInput({ value, field, onChange, onSave, onCancel }: InlineEditInputProps) {
+  const inputRef = React.useRef<HTMLInputElement>(null);
+
+  React.useEffect(() => {
+    if (inputRef.current) {
+      inputRef.current.focus();
+      inputRef.current.select();
+    }
+  }, []);
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      onSave();
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      onCancel();
+    }
+  };
+
+  // Determine input type based on field
+  const getInputType = () => {
+    if (field === 'startDate' || field === 'endDate') {
+      return 'date';
+    } else if (field === 'duration' || field === 'progress') {
+      return 'number';
+    }
+    return 'text';
+  };
+
+  return (
+    <input
+      ref={inputRef}
+      type={getInputType()}
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      onKeyDown={handleKeyDown}
+      onBlur={onSave}
+      className="flex-1 bg-slate-700 text-slate-200 px-2 py-1 rounded border border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-400"
+      onClick={(e) => e.stopPropagation()}
+    />
   );
 }
 
