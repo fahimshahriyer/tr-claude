@@ -45,6 +45,8 @@ export interface Dependency {
   type: DependencyType;
   lag?: number; // in hours
   color?: string;
+  fromPort?: 'top' | 'bottom' | 'left' | 'right';
+  toPort?: 'top' | 'bottom' | 'left' | 'right';
 }
 
 export interface TimeAxisConfig {

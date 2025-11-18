@@ -10,39 +10,62 @@ export function LiveDependencyLine() {
   const path = useMemo(() => {
     if (!dependencyCreation.isCreating) return null;
 
-    const { fromX, fromY, currentX, currentY } = dependencyCreation;
+    const { fromX, fromY, currentX, currentY, fromPort } = dependencyCreation;
     const dx = currentX - fromX;
     const dy = currentY - fromY;
 
     // Constants for elbow routing
     const horizontalOffset = 30;
-    const minVerticalGap = 10;
+    const verticalOffset = 30;
+    const minGap = 10;
 
-    // For same row connections
-    if (Math.abs(dy) < minVerticalGap) {
-      return `M ${fromX} ${fromY} L ${currentX} ${currentY}`;
-    }
+    // Route differently based on which port we're starting from
+    if (fromPort === 'top' || fromPort === 'bottom') {
+      // Vertical flow first for top/bottom ports
+      const direction = fromPort === 'top' ? -1 : 1;
 
-    // For forward connections (left to right)
-    if (dx > 0) {
+      if (Math.abs(dx) < minGap) {
+        // Nearly vertical - straight line
+        return `M ${fromX} ${fromY} L ${currentX} ${currentY}`;
+      }
+
+      // Elbow connector: vertical -> horizontal -> vertical
+      const outY = fromY + (direction * verticalOffset);
       const midX = fromX + (dx / 2);
+
       return `M ${fromX} ${fromY}
-              L ${midX} ${fromY}
+              L ${fromX} ${outY}
+              L ${midX} ${outY}
               L ${midX} ${currentY}
               L ${currentX} ${currentY}`;
+    } else {
+      // Horizontal flow first for left/right ports (default)
+      if (Math.abs(dy) < minGap) {
+        // Nearly horizontal - straight line
+        return `M ${fromX} ${fromY} L ${currentX} ${currentY}`;
+      }
+
+      // For forward connections (left to right)
+      if (dx > 0) {
+        const midX = fromX + (dx / 2);
+        return `M ${fromX} ${fromY}
+                L ${midX} ${fromY}
+                L ${midX} ${currentY}
+                L ${currentX} ${currentY}`;
+      }
+
+      // For backward connections (right to left)
+      const outX = fromX + horizontalOffset;
+      const inX = currentX - horizontalOffset;
+      const midY = (fromY + currentY) / 2;
+
+      return `M ${fromX} ${fromY}
+              L ${outX} ${fromY}
+              L ${outX} ${midY}
+              L ${inX} ${midY}
+              L ${inX} ${currentY}
+              L ${currentX} ${currentY}`;
     }
-
-    // For backward connections (right to left)
-    const outX = fromX + horizontalOffset;
-    const inX = currentX - horizontalOffset;
-    const midY = (fromY + currentY) / 2;
-
-    return `M ${fromX} ${fromY}
-            L ${outX} ${fromY}
-            L ${outX} ${midY}
-            L ${inX} ${midY}
-            L ${inX} ${currentY}
-            L ${currentX} ${currentY}`;
   }, [dependencyCreation]);
 
   if (!dependencyCreation.isCreating || !path) {

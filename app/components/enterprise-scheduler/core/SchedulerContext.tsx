@@ -350,7 +350,7 @@ function schedulerReducer(state: SchedulerState, action: SchedulerAction): Sched
       };
 
     case 'COMPLETE_DEPENDENCY_CREATION': {
-      const { fromEventId, toEventId } = state.dependencyCreation;
+      const { fromEventId, toEventId, fromPort, toPort } = state.dependencyCreation;
 
       // Only create dependency if we have both from and to events
       if (fromEventId && toEventId && fromEventId !== toEventId) {
@@ -360,12 +360,14 @@ function schedulerReducer(state: SchedulerState, action: SchedulerAction): Sched
         );
 
         if (!existingDep) {
-          // Create new dependency with default finish-to-start type
+          // Create new dependency with port information
           const newDependency: Dependency = {
             id: `dep-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
             fromEventId,
             toEventId,
             type: 'finish-to-start',
+            fromPort: fromPort || undefined,
+            toPort: toPort || undefined,
           };
 
           return {
