@@ -215,6 +215,29 @@ function SchedulerInner({ className }: { className: string }) {
         return; // Unknown drag type
       }
 
+      // Collision detection: check if new position overlaps with other events
+      const hasCollision = currentState.events.some((otherEvent) => {
+        // Skip the event being dragged
+        if (otherEvent.id === dragState.eventId) return false;
+
+        // Only check events on the same resource
+        if (otherEvent.resourceId !== newResourceId) return false;
+
+        // Check time overlap
+        const otherStart = otherEvent.startDate.getTime();
+        const otherEnd = otherEvent.endDate.getTime();
+        const newStart = newStartDate.getTime();
+        const newEnd = newEndDate.getTime();
+
+        // Events overlap if one starts before the other ends
+        return (newStart < otherEnd) && (newEnd > otherStart);
+      });
+
+      // If collision detected, don't allow the move
+      if (hasCollision) {
+        return; // Don't update ghost position
+      }
+
       dispatch({
         type: 'SET_DRAG_STATE',
         payload: {

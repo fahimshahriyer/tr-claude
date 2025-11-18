@@ -139,78 +139,70 @@ function DependencyPath({ dependency, fromX, fromY, toX, toY, color }: Dependenc
   const path = useMemo(() => {
     const dx = toX - fromX;
     const dy = toY - fromY;
-    const absDx = Math.abs(dx);
-    const absDy = Math.abs(dy);
 
-    // For same row or very close rows, use a gentle arc
-    if (absDy < 5) {
-      const controlOffset = Math.min(absDx * 0.25, 60);
-      return `M ${fromX} ${fromY} C ${fromX + controlOffset} ${fromY}, ${toX - controlOffset} ${toY}, ${toX} ${toY}`;
+    // Constants for elbow routing
+    const horizontalOffset = 30; // Distance to go out horizontally
+    const minVerticalGap = 10;   // Minimum gap for vertical routing
+
+    // For same row connections
+    if (Math.abs(dy) < minVerticalGap) {
+      // Simple straight horizontal line
+      return `M ${fromX} ${fromY} L ${toX} ${toY}`;
     }
-
-    // Calculate control points for smooth bezier curves
-    // Use horizontal offset that's proportional to distance but capped
-    const horizontalOffset = Math.min(Math.max(absDx * 0.4, 40), 120);
 
     // For forward connections (left to right)
     if (dx > 0) {
-      // Simple smooth curve when going forward
-      const cp1x = fromX + horizontalOffset;
-      const cp1y = fromY;
-      const cp2x = toX - horizontalOffset;
-      const cp2y = toY;
+      // Calculate midpoint for vertical segment
+      const midX = fromX + (dx / 2);
 
-      return `M ${fromX} ${fromY} C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${toX} ${toY}`;
+      // Elbow connector: horizontal -> vertical -> horizontal
+      return `M ${fromX} ${fromY}
+              L ${midX} ${fromY}
+              L ${midX} ${toY}
+              L ${toX} ${toY}`;
     }
-    // For backward connections (right to left) - need S-curve
+    // For backward connections (right to left)
     else {
-      // Go out horizontally first, then curve down/up, then approach target
-      const outOffset = 40;
-      const midX = (fromX + toX) / 2;
+      // Need to route around: go out, down/up, then back
+      const outX = fromX + horizontalOffset;
+      const inX = toX - horizontalOffset;
       const midY = (fromY + toY) / 2;
 
-      // Create an S-curve that goes around obstacles
-      const cp1x = fromX + outOffset;
-      const cp1y = fromY;
-      const cp2x = fromX + outOffset;
-      const cp2y = midY;
-      const cp3x = toX - outOffset;
-      const cp3y = midY;
-      const cp4x = toX - outOffset;
-      const cp4y = toY;
-
+      // Complex elbow: out -> down -> across -> down -> in
       return `M ${fromX} ${fromY}
-              C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${midX} ${midY}
-              C ${cp3x} ${cp3y}, ${cp4x} ${cp4y}, ${toX} ${toY}`;
+              L ${outX} ${fromY}
+              L ${outX} ${midY}
+              L ${inX} ${midY}
+              L ${inX} ${toY}
+              L ${toX} ${toY}`;
     }
   }, [fromX, fromY, toX, toY]);
 
   return (
     <g className="dependency-line" style={{ color }}>
-      {/* Subtle glow effect */}
+      {/* Shadow for depth */}
       <path
         d={path}
         fill="none"
-        stroke={color}
-        strokeWidth="8"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        opacity="0.15"
+        stroke="rgba(0,0,0,0.4)"
+        strokeWidth="3"
+        strokeLinecap="butt"
+        strokeLinejoin="miter"
+        opacity="0.5"
         className="pointer-events-none"
-        filter="blur(4px)"
       />
 
-      {/* Main line with gradient */}
+      {/* Main line - angular with sharp corners */}
       <path
         d={path}
         fill="none"
         stroke={color}
         strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
+        strokeLinecap="butt"
+        strokeLinejoin="miter"
         markerEnd="url(#arrowhead)"
-        className="pointer-events-none transition-all"
-        opacity="0.9"
+        className="pointer-events-none transition-colors"
+        opacity="0.85"
       />
 
       {/* Invisible wider path for easier hover/click detection */}
@@ -218,7 +210,7 @@ function DependencyPath({ dependency, fromX, fromY, toX, toY, color }: Dependenc
         d={path}
         fill="none"
         stroke="transparent"
-        strokeWidth="20"
+        strokeWidth="16"
         strokeLinecap="round"
         strokeLinejoin="round"
         className="pointer-events-auto cursor-pointer"
