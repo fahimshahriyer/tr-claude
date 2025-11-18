@@ -142,7 +142,7 @@ export function TaskRow({ task, columns }: TaskRowProps) {
                 onCancel={() => dispatch({ type: 'CANCEL_INLINE_EDIT' })}
               />
             ) : (
-              renderCellContent(column, task)
+              renderCellContent(column, task, state)
             )}
           </div>
         );
@@ -203,13 +203,27 @@ function InlineEditInput({ value, field, onChange, onSave, onCancel }: InlineEdi
   );
 }
 
-function renderCellContent(column: GanttColumn, task: GanttTask) {
+function renderCellContent(column: GanttColumn, task: GanttTask, state?: any) {
   const field = column.field as keyof GanttTask;
   const value = task[field];
 
   // Custom cell renderer
   if (column.renderCell) {
     return column.renderCell(task);
+  }
+
+  // Slack column (requires critical path schedules)
+  if (column.id === 'slack') {
+    if (!state?.criticalPathSchedules) {
+      return <span className="text-slate-500 text-xs">-</span>;
+    }
+    const schedule = state.criticalPathSchedules.get(task.id);
+    if (!schedule) {
+      return <span className="text-slate-500 text-xs">-</span>;
+    }
+    const slack = Math.round(schedule.totalSlack * 10) / 10; // Round to 1 decimal
+    const slackColor = slack === 0 ? 'text-red-400' : slack < 5 ? 'text-yellow-400' : 'text-green-400';
+    return <span className={`text-xs font-medium ${slackColor}`}>{slack}d</span>;
   }
 
   // Date formatting

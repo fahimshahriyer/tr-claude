@@ -120,6 +120,13 @@ export interface ContextMenuState {
   taskId: string | null;
 }
 
+export interface InlineEditState {
+  isEditing: boolean;
+  taskId: string | null;
+  field: keyof GanttTask | null;
+  value: string;
+}
+
 export interface ViewportState {
   scrollLeft: number;
   scrollTop: number;
@@ -139,6 +146,7 @@ export interface GanttState {
   selection: SelectionState;
   dragState: DragState;
   contextMenu: ContextMenuState;
+  inlineEdit: InlineEditState;
   baselines: GanttBaseline[];
   showCriticalPath: boolean;
   criticalPathSchedules: Map<string, any> | null; // TaskSchedule map
@@ -246,6 +254,16 @@ export const DEFAULT_COLUMNS: GanttColumn[] = [
     resizable: true,
     sortable: true,
     editable: true,
+    visible: true,
+  },
+  {
+    id: 'slack',
+    title: 'Slack',
+    field: 'id', // We'll use custom renderer to get slack from schedules
+    width: 80,
+    resizable: true,
+    sortable: false,
+    editable: false,
     visible: true,
   },
 ];
