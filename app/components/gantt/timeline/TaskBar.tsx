@@ -3,6 +3,7 @@
 import React, { useMemo, useEffect, useCallback } from 'react';
 import { GanttTask, ZoomLevel } from '../core/types';
 import { useGantt } from '../core/GanttContext';
+import { snapToWorkingDay, addWorkingDays, calculateDuration } from '../core/calendarUtils';
 
 interface TaskBarProps {
   task: GanttTask;
@@ -115,15 +116,37 @@ export function TaskBar({
 
       if (state.dragState.dragType === 'move') {
         // Move entire task
+        let newStartDate = new Date(task.startDate.getTime() + timeDelta);
+        let newEndDate = new Date(task.endDate.getTime() + timeDelta);
+
+        // Snap to working days if calendar mode is enabled
+        if (state.useCalendar) {
+          newStartDate = snapToWorkingDay(newStartDate, state.calendar, 'nearest');
+          const durationInWorkingDays = calculateDuration(task.startDate, task.endDate, state.calendar);
+          newEndDate = addWorkingDays(newStartDate, durationInWorkingDays - 1, state.calendar);
+        }
+
         ghostTask = {
           ...task,
-          startDate: new Date(task.startDate.getTime() + timeDelta),
-          endDate: new Date(task.endDate.getTime() + timeDelta),
+          startDate: newStartDate,
+          endDate: newEndDate,
         };
       } else if (state.dragState.dragType === 'resize-start') {
         // Resize start date
-        const newStartDate = new Date(task.startDate.getTime() + timeDelta);
-        const newDuration = (task.endDate.getTime() - newStartDate.getTime()) / dayInMs;
+        let newStartDate = new Date(task.startDate.getTime() + timeDelta);
+
+        // Snap to working day if calendar mode is enabled
+        if (state.useCalendar) {
+          newStartDate = snapToWorkingDay(newStartDate, state.calendar, 'nearest');
+        }
+
+        let newDuration: number;
+        if (state.useCalendar) {
+          newDuration = calculateDuration(newStartDate, task.endDate, state.calendar);
+        } else {
+          newDuration = (task.endDate.getTime() - newStartDate.getTime()) / dayInMs;
+        }
+
         ghostTask = {
           ...task,
           startDate: newStartDate,
@@ -131,8 +154,20 @@ export function TaskBar({
         };
       } else {
         // Resize end date
-        const newEndDate = new Date(task.endDate.getTime() + timeDelta);
-        const newDuration = (newEndDate.getTime() - task.startDate.getTime()) / dayInMs;
+        let newEndDate = new Date(task.endDate.getTime() + timeDelta);
+
+        // Snap to working day if calendar mode is enabled
+        if (state.useCalendar) {
+          newEndDate = snapToWorkingDay(newEndDate, state.calendar, 'nearest');
+        }
+
+        let newDuration: number;
+        if (state.useCalendar) {
+          newDuration = calculateDuration(task.startDate, newEndDate, state.calendar);
+        } else {
+          newDuration = (newEndDate.getTime() - task.startDate.getTime()) / dayInMs;
+        }
+
         ghostTask = {
           ...task,
           endDate: newEndDate,

@@ -48,6 +48,10 @@ function GanttInner({ className }: { className: string }) {
     setShowAddTaskModal(true);
   };
 
+  const handleToggleCalendar = () => {
+    dispatch({ type: 'TOGGLE_CALENDAR' });
+  };
+
   // Sync vertical scroll between tree and timeline
   const handleTreeScroll = (e: React.UIEvent<HTMLDivElement>) => {
     if (timelineScrollRef.current) {
@@ -126,8 +130,22 @@ function GanttInner({ className }: { className: string }) {
         <span className="text-white text-sm font-semibold">Gantt Chart</span>
         <div className="ml-4 flex items-center gap-2">
           <span className="text-slate-400 text-xs">Zoom: {state.zoomLevel.name}</span>
+          <span className="text-slate-600">|</span>
+          <span className="text-slate-400 text-xs">
+            Calendar: {state.useCalendar ? 'Working Days' : 'All Days'}
+          </span>
         </div>
         <div className="ml-auto flex items-center gap-2">
+          <button
+            onClick={handleToggleCalendar}
+            className={`px-3 py-1 text-white text-sm rounded transition-colors ${
+              state.useCalendar
+                ? 'bg-green-600 hover:bg-green-700'
+                : 'bg-slate-700 hover:bg-slate-600'
+            }`}
+          >
+            {state.useCalendar ? '📅 Working Days' : '📆 All Days'}
+          </button>
           <button
             onClick={handleAddTask}
             className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded transition-colors"

@@ -27,7 +27,8 @@ type GanttAction =
   | { type: 'START_DRAG'; payload: { taskId: string; dragType: 'move' | 'resize-start' | 'resize-end'; startX: number; startY: number } }
   | { type: 'UPDATE_DRAG'; payload: { currentX: number; currentY: number; ghostTask: GanttTask } }
   | { type: 'END_DRAG' }
-  | { type: 'CANCEL_DRAG' };
+  | { type: 'CANCEL_DRAG' }
+  | { type: 'TOGGLE_CALENDAR' };
 
 // Reducer
 function ganttReducer(state: GanttState, action: GanttAction): GanttState {
@@ -213,6 +214,12 @@ function ganttReducer(state: GanttState, action: GanttAction): GanttState {
         },
       };
 
+    case 'TOGGLE_CALENDAR':
+      return {
+        ...state,
+        useCalendar: !state.useCalendar,
+      };
+
     default:
       return state;
   }
@@ -282,6 +289,7 @@ export function GanttProvider({
       showCriticalPath: false,
       showBaseline: false,
       autoSchedule: false,
+      useCalendar: false,
       undoStack: [],
       redoStack: [],
     }),
