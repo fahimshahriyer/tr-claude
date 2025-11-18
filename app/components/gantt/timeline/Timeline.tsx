@@ -135,6 +135,45 @@ export function Timeline({ scrollRef, onScroll }: TimelineProps) {
               zoomLevel={zoomLevel}
             />
           ))}
+
+          {/* Ghost Task Bar (during drag) */}
+          {state.dragState.isDragging && state.dragState.ghostTask && (() => {
+            const ghostTask = state.dragState.ghostTask;
+            const taskIndex = visibleTasks.findIndex(t => t.id === ghostTask.id);
+
+            if (taskIndex === -1) return null;
+
+            const dayInMs = 24 * 60 * 60 * 1000;
+            const startOffset = (ghostTask.startDate.getTime() - timelineStart.getTime()) / dayInMs;
+            const duration = (ghostTask.endDate.getTime() - ghostTask.startDate.getTime()) / dayInMs;
+            const left = startOffset * zoomLevel.cellWidth;
+            const width = Math.max(duration * zoomLevel.cellWidth, 10);
+
+            return (
+              <div
+                className="absolute pointer-events-none"
+                style={{
+                  left,
+                  top: taskIndex * rowHeight + 8,
+                  width,
+                  height: rowHeight - 16,
+                }}
+              >
+                <div
+                  className="h-full rounded border-2 border-blue-400 bg-blue-400/20"
+                  style={{
+                    borderStyle: 'dashed',
+                  }}
+                >
+                  <div className="absolute inset-0 flex items-center px-2">
+                    <span className="text-xs text-blue-300 font-medium truncate">
+                      {ghostTask.name}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
         </div>
       </div>
     </div>
