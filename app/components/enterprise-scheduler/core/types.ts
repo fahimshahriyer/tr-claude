@@ -94,6 +94,18 @@ export interface DragState {
   targetResourceId?: string;
 }
 
+export interface DependencyCreationState {
+  isCreating: boolean;
+  fromEventId: string | null;
+  fromPort: 'top' | 'bottom' | 'left' | 'right' | null;
+  fromX: number;
+  fromY: number;
+  currentX: number;
+  currentY: number;
+  toEventId?: string | null;
+  toPort?: 'top' | 'bottom' | 'left' | 'right' | null;
+}
+
 export interface SelectionState {
   selectedEventIds: Set<string>;
   selectedResourceIds: Set<string>;
@@ -114,6 +126,7 @@ export interface SchedulerState {
   viewport: ViewportBounds;
   selection: SelectionState;
   dragState: DragState;
+  dependencyCreation: DependencyCreationState;
   snapToGrid: boolean;
   showDependencies: boolean;
 }
