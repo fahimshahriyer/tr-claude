@@ -212,24 +212,32 @@ export function EventBar({
             <div
               className="absolute left-1/2 top-0 -translate-x-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-blue-500 border-2 border-white cursor-crosshair hover:scale-125 transition-transform z-20"
               onMouseDown={(e) => handlePortMouseDown(e, 'top')}
+              data-port="top"
+              data-event-id={event.id}
               title="Connect from top"
             />
             {/* Right port */}
             <div
               className="absolute right-0 top-1/2 translate-x-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-blue-500 border-2 border-white cursor-crosshair hover:scale-125 transition-transform z-20"
               onMouseDown={(e) => handlePortMouseDown(e, 'right')}
+              data-port="right"
+              data-event-id={event.id}
               title="Connect from right"
             />
             {/* Bottom port */}
             <div
               className="absolute left-1/2 bottom-0 -translate-x-1/2 translate-y-1/2 w-3 h-3 rounded-full bg-blue-500 border-2 border-white cursor-crosshair hover:scale-125 transition-transform z-20"
               onMouseDown={(e) => handlePortMouseDown(e, 'bottom')}
+              data-port="bottom"
+              data-event-id={event.id}
               title="Connect from bottom"
             />
             {/* Left port */}
             <div
               className="absolute left-0 top-1/2 -translate-x-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-blue-500 border-2 border-white cursor-crosshair hover:scale-125 transition-transform z-20"
               onMouseDown={(e) => handlePortMouseDown(e, 'left')}
+              data-port="left"
+              data-event-id={event.id}
               title="Connect from left"
             />
           </>

@@ -349,7 +349,42 @@ function schedulerReducer(state: SchedulerState, action: SchedulerAction): Sched
         },
       };
 
-    case 'COMPLETE_DEPENDENCY_CREATION':
+    case 'COMPLETE_DEPENDENCY_CREATION': {
+      const { fromEventId, toEventId } = state.dependencyCreation;
+
+      // Only create dependency if we have both from and to events
+      if (fromEventId && toEventId && fromEventId !== toEventId) {
+        // Check if dependency already exists
+        const existingDep = state.dependencies.find(
+          d => d.fromEventId === fromEventId && d.toEventId === toEventId
+        );
+
+        if (!existingDep) {
+          // Create new dependency with default finish-to-start type
+          const newDependency: Dependency = {
+            id: `dep-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+            fromEventId,
+            toEventId,
+            type: 'finish-to-start',
+          };
+
+          return {
+            ...state,
+            dependencies: [...state.dependencies, newDependency],
+            dependencyCreation: {
+              isCreating: false,
+              fromEventId: null,
+              fromPort: null,
+              fromX: 0,
+              fromY: 0,
+              currentX: 0,
+              currentY: 0,
+            },
+          };
+        }
+      }
+
+      // Reset dependency creation state
       return {
         ...state,
         dependencyCreation: {
@@ -362,6 +397,7 @@ function schedulerReducer(state: SchedulerState, action: SchedulerAction): Sched
           currentY: 0,
         },
       };
+    }
 
     case 'CANCEL_DEPENDENCY_CREATION':
       return {
