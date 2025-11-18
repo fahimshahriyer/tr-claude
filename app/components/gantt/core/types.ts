@@ -133,6 +133,7 @@ export interface GanttState {
   dragState: DragState;
   baselines: GanttBaseline[];
   showCriticalPath: boolean;
+  criticalPathSchedules: Map<string, any> | null; // TaskSchedule map
   showBaseline: boolean;
   autoSchedule: boolean;
   useCalendar: boolean; // Whether to use calendar for date calculations
