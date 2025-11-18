@@ -24,12 +24,22 @@ export function LiveDependencyLine() {
       // Vertical flow first for top/bottom ports
       const direction = fromPort === 'top' ? -1 : 1;
 
-      if (Math.abs(dx) < minGap) {
-        // Nearly vertical - straight line
+      // If mostly vertical and reasonably aligned, draw simple straight line
+      if (Math.abs(dx) < 60) {
         return `M ${fromX} ${fromY} L ${currentX} ${currentY}`;
       }
 
-      // Elbow connector: vertical -> horizontal -> vertical
+      // If close vertically but offset horizontally, use simple elbow
+      if (Math.abs(dy) < verticalOffset * 2) {
+        const midX = fromX + (dx / 2);
+        const midY = fromY + (dy / 2);
+
+        return `M ${fromX} ${fromY}
+                L ${midX} ${midY}
+                L ${currentX} ${currentY}`;
+      }
+
+      // For larger separations, use full elbow routing
       const outY = fromY + (direction * verticalOffset);
       const midX = fromX + (dx / 2);
 

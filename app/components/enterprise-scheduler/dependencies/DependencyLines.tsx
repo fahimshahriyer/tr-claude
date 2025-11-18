@@ -214,12 +214,32 @@ function DependencyPath({ dependency, fromX, fromY, toX, toY, color }: Dependenc
 
     // Case 1: Both ports are vertical (top/bottom)
     if (fromVertical && toVertical) {
-      if (Math.abs(dx) < minGap) {
+      // Check if this is a natural vertical flow (bottom→top or top→bottom)
+      const isNaturalVerticalFlow =
+        (fromPort === 'bottom' && toPort === 'top' && dy > 0) || // downward
+        (fromPort === 'top' && toPort === 'bottom' && dy < 0);   // upward
+
+      // If natural vertical flow and reasonably aligned horizontally, draw simple straight line
+      if (isNaturalVerticalFlow && Math.abs(dx) < 60) {
         return `M ${fromX} ${fromY} L ${toX} ${toY}`;
       }
 
+      // For other vertical-to-vertical connections or when horizontally separated,
+      // use elbow routing through the space between tasks
       const fromDir = fromPort === 'top' ? -1 : 1;
       const toDir = toPort === 'top' ? -1 : 1;
+
+      // If tasks are close vertically but offset horizontally, just route between them
+      if (Math.abs(dy) < verticalOffset * 2) {
+        const midX = fromX + (dx / 2);
+        const midY = fromY + (dy / 2);
+
+        return `M ${fromX} ${fromY}
+                L ${midX} ${midY}
+                L ${toX} ${toY}`;
+      }
+
+      // For tasks far apart, use full elbow routing
       const outY = fromY + (fromDir * verticalOffset);
       const inY = toY + (toDir * verticalOffset);
       const midX = fromX + (dx / 2);
