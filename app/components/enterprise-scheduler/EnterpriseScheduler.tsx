@@ -41,6 +41,12 @@ function SchedulerInner({ className }: { className: string }) {
   const [scrollLeft, setScrollLeft] = useState(0);
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
 
+  // Use ref to always have latest state values
+  const stateRef = useRef(state);
+  useEffect(() => {
+    stateRef.current = state;
+  }, [state]);
+
   // Handle scroll events
   const handleScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
     const target = e.target as HTMLDivElement;
@@ -159,15 +165,17 @@ function SchedulerInner({ className }: { className: string }) {
   useEffect(() => {
     if (!state.dragState.isDragging) return;
 
-    const dragState = state.dragState;
-    const zoomLevel = state.zoomLevel;
-    const timeAxis = state.timeAxis;
-
     const handleMouseMove = (e: MouseEvent) => {
+      // Always get fresh state values
+      const currentState = stateRef.current;
+      const dragState = currentState.dragState;
       if (!dragState.originalEvent) return;
 
       const deltaX = e.clientX - dragState.startX;
       const deltaY = e.clientY - dragState.startY;
+
+      // Get current values from state
+      const { timeAxis, zoomLevel } = currentState;
 
       // Calculate milliseconds per pixel
       const msPerPixel = zoomLevel.tickSize / timeAxis.cellWidth;
@@ -225,6 +233,9 @@ function SchedulerInner({ className }: { className: string }) {
     const handleMouseUp = (e: MouseEvent) => {
       e.preventDefault();
 
+      // Get fresh state at mouseup time
+      const currentState = stateRef.current;
+      const dragState = currentState.dragState;
       if (dragState.ghostEvent && dragState.eventId) {
         // Commit the drag operation
         dispatch({
@@ -250,7 +261,7 @@ function SchedulerInner({ className }: { className: string }) {
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
     };
-  }, [state.dragState.isDragging, dispatch, config.rowHeight, config.minEventDuration]);
+  }, [state.dragState.isDragging, dispatch, config.rowHeight, config.minEventDuration, stateRef]);
 
   const sidebarWidth = config.sidebarWidth;
   const timelineWidth = containerSize.width;
