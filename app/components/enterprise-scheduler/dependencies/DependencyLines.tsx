@@ -33,21 +33,81 @@ export function DependencyLines({ scrollLeft, scrollTop, rowHeight }: Dependency
       // Calculate positions
       const timeAxisStart = timeAxis.startDate.getTime();
 
-      // From point (end of from event for finish-to-start)
-      const fromTime = dep.type === 'start-to-start' || dep.type === 'start-to-finish'
-        ? fromEvent.startDate.getTime()
-        : fromEvent.endDate.getTime();
+      // Calculate event bounding boxes
+      const fromStartX = ((fromEvent.startDate.getTime() - timeAxisStart) / zoomLevel.tickSize) * timeAxis.cellWidth;
+      const fromEndX = ((fromEvent.endDate.getTime() - timeAxisStart) / zoomLevel.tickSize) * timeAxis.cellWidth;
+      const fromTopY = fromResourceIndex * rowHeight;
+      const fromBottomY = fromResourceIndex * rowHeight + rowHeight;
+      const fromCenterY = fromResourceIndex * rowHeight + rowHeight / 2;
 
-      const fromX = ((fromTime - timeAxisStart) / zoomLevel.tickSize) * timeAxis.cellWidth;
-      const fromY = fromResourceIndex * rowHeight + rowHeight / 2;
+      const toStartX = ((toEvent.startDate.getTime() - timeAxisStart) / zoomLevel.tickSize) * timeAxis.cellWidth;
+      const toEndX = ((toEvent.endDate.getTime() - timeAxisStart) / zoomLevel.tickSize) * timeAxis.cellWidth;
+      const toTopY = toResourceIndex * rowHeight;
+      const toBottomY = toResourceIndex * rowHeight + rowHeight;
+      const toCenterY = toResourceIndex * rowHeight + rowHeight / 2;
 
-      // To point (start of to event for finish-to-start)
-      const toTime = dep.type === 'finish-to-finish' || dep.type === 'start-to-finish'
-        ? toEvent.endDate.getTime()
-        : toEvent.startDate.getTime();
+      // Calculate port positions
+      let fromX: number, fromY: number;
 
-      const toX = ((toTime - timeAxisStart) / zoomLevel.tickSize) * timeAxis.cellWidth;
-      const toY = toResourceIndex * rowHeight + rowHeight / 2;
+      if (dep.fromPort) {
+        // Use the specified port
+        switch (dep.fromPort) {
+          case 'top':
+            fromX = (fromStartX + fromEndX) / 2;
+            fromY = fromTopY;
+            break;
+          case 'bottom':
+            fromX = (fromStartX + fromEndX) / 2;
+            fromY = fromBottomY;
+            break;
+          case 'left':
+            fromX = fromStartX;
+            fromY = fromCenterY;
+            break;
+          case 'right':
+            fromX = fromEndX;
+            fromY = fromCenterY;
+            break;
+        }
+      } else {
+        // Default: use dependency type to determine position
+        const fromTime = dep.type === 'start-to-start' || dep.type === 'start-to-finish'
+          ? fromEvent.startDate.getTime()
+          : fromEvent.endDate.getTime();
+        fromX = ((fromTime - timeAxisStart) / zoomLevel.tickSize) * timeAxis.cellWidth;
+        fromY = fromCenterY;
+      }
+
+      let toX: number, toY: number;
+
+      if (dep.toPort) {
+        // Use the specified port
+        switch (dep.toPort) {
+          case 'top':
+            toX = (toStartX + toEndX) / 2;
+            toY = toTopY;
+            break;
+          case 'bottom':
+            toX = (toStartX + toEndX) / 2;
+            toY = toBottomY;
+            break;
+          case 'left':
+            toX = toStartX;
+            toY = toCenterY;
+            break;
+          case 'right':
+            toX = toEndX;
+            toY = toCenterY;
+            break;
+        }
+      } else {
+        // Default: use dependency type to determine position
+        const toTime = dep.type === 'finish-to-finish' || dep.type === 'start-to-finish'
+          ? toEvent.endDate.getTime()
+          : toEvent.startDate.getTime();
+        toX = ((toTime - timeAxisStart) / zoomLevel.tickSize) * timeAxis.cellWidth;
+        toY = toCenterY;
+      }
 
       return {
         dependency: dep,
@@ -139,78 +199,115 @@ function DependencyPath({ dependency, fromX, fromY, toX, toY, color }: Dependenc
   const path = useMemo(() => {
     const dx = toX - fromX;
     const dy = toY - fromY;
-    const absDx = Math.abs(dx);
-    const absDy = Math.abs(dy);
 
-    // For same row or very close rows, use a gentle arc
-    if (absDy < 5) {
-      const controlOffset = Math.min(absDx * 0.25, 60);
-      return `M ${fromX} ${fromY} C ${fromX + controlOffset} ${fromY}, ${toX - controlOffset} ${toY}, ${toX} ${toY}`;
-    }
+    // Constants for elbow routing
+    const horizontalOffset = 30;
+    const verticalOffset = 30;
+    const minGap = 10;
 
-    // Calculate control points for smooth bezier curves
-    // Use horizontal offset that's proportional to distance but capped
-    const horizontalOffset = Math.min(Math.max(absDx * 0.4, 40), 120);
+    const fromPort = dependency.fromPort;
+    const toPort = dependency.toPort;
 
-    // For forward connections (left to right)
-    if (dx > 0) {
-      // Simple smooth curve when going forward
-      const cp1x = fromX + horizontalOffset;
-      const cp1y = fromY;
-      const cp2x = toX - horizontalOffset;
-      const cp2y = toY;
+    // Determine primary flow direction based on ports
+    const fromVertical = fromPort === 'top' || fromPort === 'bottom';
+    const toVertical = toPort === 'top' || toPort === 'bottom';
 
-      return `M ${fromX} ${fromY} C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${toX} ${toY}`;
-    }
-    // For backward connections (right to left) - need S-curve
-    else {
-      // Go out horizontally first, then curve down/up, then approach target
-      const outOffset = 40;
-      const midX = (fromX + toX) / 2;
-      const midY = (fromY + toY) / 2;
+    // Case 1: Both ports are vertical (top/bottom)
+    if (fromVertical && toVertical) {
+      if (Math.abs(dx) < minGap) {
+        return `M ${fromX} ${fromY} L ${toX} ${toY}`;
+      }
 
-      // Create an S-curve that goes around obstacles
-      const cp1x = fromX + outOffset;
-      const cp1y = fromY;
-      const cp2x = fromX + outOffset;
-      const cp2y = midY;
-      const cp3x = toX - outOffset;
-      const cp3y = midY;
-      const cp4x = toX - outOffset;
-      const cp4y = toY;
+      const fromDir = fromPort === 'top' ? -1 : 1;
+      const toDir = toPort === 'top' ? -1 : 1;
+      const outY = fromY + (fromDir * verticalOffset);
+      const inY = toY + (toDir * verticalOffset);
+      const midX = fromX + (dx / 2);
 
       return `M ${fromX} ${fromY}
-              C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${midX} ${midY}
-              C ${cp3x} ${cp3y}, ${cp4x} ${cp4y}, ${toX} ${toY}`;
+              L ${fromX} ${outY}
+              L ${midX} ${outY}
+              L ${midX} ${inY}
+              L ${toX} ${inY}
+              L ${toX} ${toY}`;
     }
-  }, [fromX, fromY, toX, toY]);
+
+    // Case 2: From vertical, to horizontal
+    if (fromVertical && !toVertical) {
+      const fromDir = fromPort === 'top' ? -1 : 1;
+      const outY = fromY + (fromDir * verticalOffset);
+      const midX = fromX + (dx / 2);
+
+      return `M ${fromX} ${fromY}
+              L ${fromX} ${outY}
+              L ${midX} ${outY}
+              L ${midX} ${toY}
+              L ${toX} ${toY}`;
+    }
+
+    // Case 3: From horizontal, to vertical
+    if (!fromVertical && toVertical) {
+      const toDir = toPort === 'top' ? -1 : 1;
+      const inY = toY + (toDir * verticalOffset);
+      const midX = fromX + (dx / 2);
+
+      return `M ${fromX} ${fromY}
+              L ${midX} ${fromY}
+              L ${midX} ${inY}
+              L ${toX} ${inY}
+              L ${toX} ${toY}`;
+    }
+
+    // Case 4: Both horizontal (left/right) - original logic
+    if (Math.abs(dy) < minGap) {
+      return `M ${fromX} ${fromY} L ${toX} ${toY}`;
+    }
+
+    if (dx > 0) {
+      const midX = fromX + (dx / 2);
+      return `M ${fromX} ${fromY}
+              L ${midX} ${fromY}
+              L ${midX} ${toY}
+              L ${toX} ${toY}`;
+    } else {
+      const outX = fromX + horizontalOffset;
+      const inX = toX - horizontalOffset;
+      const midY = (fromY + toY) / 2;
+
+      return `M ${fromX} ${fromY}
+              L ${outX} ${fromY}
+              L ${outX} ${midY}
+              L ${inX} ${midY}
+              L ${inX} ${toY}
+              L ${toX} ${toY}`;
+    }
+  }, [fromX, fromY, toX, toY, dependency.fromPort, dependency.toPort]);
 
   return (
     <g className="dependency-line" style={{ color }}>
-      {/* Subtle glow effect */}
+      {/* Shadow for depth */}
       <path
         d={path}
         fill="none"
-        stroke={color}
-        strokeWidth="8"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        opacity="0.15"
+        stroke="rgba(0,0,0,0.4)"
+        strokeWidth="3"
+        strokeLinecap="butt"
+        strokeLinejoin="miter"
+        opacity="0.5"
         className="pointer-events-none"
-        filter="blur(4px)"
       />
 
-      {/* Main line with gradient */}
+      {/* Main line - angular with sharp corners */}
       <path
         d={path}
         fill="none"
         stroke={color}
         strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
+        strokeLinecap="butt"
+        strokeLinejoin="miter"
         markerEnd="url(#arrowhead)"
-        className="pointer-events-none transition-all"
-        opacity="0.9"
+        className="pointer-events-none transition-colors"
+        opacity="0.85"
       />
 
       {/* Invisible wider path for easier hover/click detection */}
@@ -218,7 +315,7 @@ function DependencyPath({ dependency, fromX, fromY, toX, toY, color }: Dependenc
         d={path}
         fill="none"
         stroke="transparent"
-        strokeWidth="20"
+        strokeWidth="16"
         strokeLinecap="round"
         strokeLinejoin="round"
         className="pointer-events-auto cursor-pointer"

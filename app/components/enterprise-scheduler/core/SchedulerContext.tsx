@@ -34,6 +34,10 @@ type SchedulerAction =
   | { type: 'SET_VIEWPORT'; payload: Partial<ViewportBounds> }
   | { type: 'SET_DRAG_STATE'; payload: Partial<DragState> }
   | { type: 'CLEAR_DRAG_STATE' }
+  | { type: 'START_DEPENDENCY_CREATION'; payload: { eventId: string; port: 'top' | 'bottom' | 'left' | 'right'; x: number; y: number } }
+  | { type: 'UPDATE_DEPENDENCY_CREATION'; payload: { x: number; y: number; toEventId?: string | null; toPort?: 'top' | 'bottom' | 'left' | 'right' | null } }
+  | { type: 'COMPLETE_DEPENDENCY_CREATION' }
+  | { type: 'CANCEL_DEPENDENCY_CREATION' }
   | { type: 'SELECT_EVENT'; payload: string }
   | { type: 'DESELECT_EVENT'; payload: string }
   | { type: 'CLEAR_SELECTION' }
@@ -83,6 +87,15 @@ function createInitialState(config: SchedulerConfig): SchedulerState {
       eventId: null,
       startX: 0,
       startY: 0,
+      currentX: 0,
+      currentY: 0,
+    },
+    dependencyCreation: {
+      isCreating: false,
+      fromEventId: null,
+      fromPort: null,
+      fromX: 0,
+      fromY: 0,
       currentX: 0,
       currentY: 0,
     },
@@ -309,6 +322,98 @@ function schedulerReducer(state: SchedulerState, action: SchedulerAction): Sched
         },
       };
     }
+
+    case 'START_DEPENDENCY_CREATION':
+      return {
+        ...state,
+        dependencyCreation: {
+          isCreating: true,
+          fromEventId: action.payload.eventId,
+          fromPort: action.payload.port,
+          fromX: action.payload.x,
+          fromY: action.payload.y,
+          currentX: action.payload.x,
+          currentY: action.payload.y,
+        },
+      };
+
+    case 'UPDATE_DEPENDENCY_CREATION':
+      return {
+        ...state,
+        dependencyCreation: {
+          ...state.dependencyCreation,
+          currentX: action.payload.x,
+          currentY: action.payload.y,
+          toEventId: action.payload.toEventId,
+          toPort: action.payload.toPort,
+        },
+      };
+
+    case 'COMPLETE_DEPENDENCY_CREATION': {
+      const { fromEventId, toEventId, fromPort, toPort } = state.dependencyCreation;
+
+      // Only create dependency if we have both from and to events
+      if (fromEventId && toEventId && fromEventId !== toEventId) {
+        // Check if dependency already exists
+        const existingDep = state.dependencies.find(
+          d => d.fromEventId === fromEventId && d.toEventId === toEventId
+        );
+
+        if (!existingDep) {
+          // Create new dependency with port information
+          const newDependency: Dependency = {
+            id: `dep-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+            fromEventId,
+            toEventId,
+            type: 'finish-to-start',
+            fromPort: fromPort || undefined,
+            toPort: toPort || undefined,
+          };
+
+          return {
+            ...state,
+            dependencies: [...state.dependencies, newDependency],
+            dependencyCreation: {
+              isCreating: false,
+              fromEventId: null,
+              fromPort: null,
+              fromX: 0,
+              fromY: 0,
+              currentX: 0,
+              currentY: 0,
+            },
+          };
+        }
+      }
+
+      // Reset dependency creation state
+      return {
+        ...state,
+        dependencyCreation: {
+          isCreating: false,
+          fromEventId: null,
+          fromPort: null,
+          fromX: 0,
+          fromY: 0,
+          currentX: 0,
+          currentY: 0,
+        },
+      };
+    }
+
+    case 'CANCEL_DEPENDENCY_CREATION':
+      return {
+        ...state,
+        dependencyCreation: {
+          isCreating: false,
+          fromEventId: null,
+          fromPort: null,
+          fromX: 0,
+          fromY: 0,
+          currentX: 0,
+          currentY: 0,
+        },
+      };
 
     default:
       return state;

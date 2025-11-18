@@ -6,6 +6,7 @@ import { Toolbar } from './toolbar/Toolbar';
 import { ResourcePanel } from './panels/ResourcePanel';
 import { TimeAxis } from './timeline/TimeAxis';
 import { TimelinePanel } from './timeline/TimelinePanel';
+import { LiveDependencyLine } from './dependencies/LiveDependencyLine';
 import { Resource, SchedulerEvent, Dependency, SchedulerConfig } from './core/types';
 
 interface EnterpriseSchedulerProps {
@@ -40,6 +41,12 @@ function SchedulerInner({ className }: { className: string }) {
   const [scrollTop, setScrollTop] = useState(0);
   const [scrollLeft, setScrollLeft] = useState(0);
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
+
+  // Use ref to always have latest state values
+  const stateRef = useRef(state);
+  useEffect(() => {
+    stateRef.current = state;
+  }, [state]);
 
   // Handle scroll events
   const handleScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
@@ -159,15 +166,17 @@ function SchedulerInner({ className }: { className: string }) {
   useEffect(() => {
     if (!state.dragState.isDragging) return;
 
-    const dragState = state.dragState;
-    const zoomLevel = state.zoomLevel;
-    const timeAxis = state.timeAxis;
-
     const handleMouseMove = (e: MouseEvent) => {
+      // Always get fresh state values
+      const currentState = stateRef.current;
+      const dragState = currentState.dragState;
       if (!dragState.originalEvent) return;
 
       const deltaX = e.clientX - dragState.startX;
       const deltaY = e.clientY - dragState.startY;
+
+      // Get current values from state
+      const { timeAxis, zoomLevel } = currentState;
 
       // Calculate milliseconds per pixel
       const msPerPixel = zoomLevel.tickSize / timeAxis.cellWidth;
@@ -207,6 +216,29 @@ function SchedulerInner({ className }: { className: string }) {
         return; // Unknown drag type
       }
 
+      // Collision detection: check if new position overlaps with other events
+      const hasCollision = currentState.events.some((otherEvent) => {
+        // Skip the event being dragged
+        if (otherEvent.id === dragState.eventId) return false;
+
+        // Only check events on the same resource
+        if (otherEvent.resourceId !== newResourceId) return false;
+
+        // Check time overlap
+        const otherStart = otherEvent.startDate.getTime();
+        const otherEnd = otherEvent.endDate.getTime();
+        const newStart = newStartDate.getTime();
+        const newEnd = newEndDate.getTime();
+
+        // Events overlap if one starts before the other ends
+        return (newStart < otherEnd) && (newEnd > otherStart);
+      });
+
+      // If collision detected, don't allow the move
+      if (hasCollision) {
+        return; // Don't update ghost position
+      }
+
       dispatch({
         type: 'SET_DRAG_STATE',
         payload: {
@@ -225,6 +257,9 @@ function SchedulerInner({ className }: { className: string }) {
     const handleMouseUp = (e: MouseEvent) => {
       e.preventDefault();
 
+      // Get fresh state at mouseup time
+      const currentState = stateRef.current;
+      const dragState = currentState.dragState;
       if (dragState.ghostEvent && dragState.eventId) {
         // Commit the drag operation
         dispatch({
@@ -250,7 +285,74 @@ function SchedulerInner({ className }: { className: string }) {
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
     };
-  }, [state.dragState.isDragging, dispatch, config.rowHeight, config.minEventDuration]);
+  }, [state.dragState.isDragging, dispatch, config.rowHeight, config.minEventDuration, stateRef]);
+
+  // Handle global mouse events for dependency creation
+  useEffect(() => {
+    if (!state.dependencyCreation.isCreating) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      // Update current position for live line rendering
+      dispatch({
+        type: 'UPDATE_DEPENDENCY_CREATION',
+        payload: {
+          x: e.clientX,
+          y: e.clientY,
+        },
+      });
+    };
+
+    const handleMouseUp = (e: MouseEvent) => {
+      // Check if mouse is over a valid target port
+      const target = e.target as HTMLElement;
+      const portElement = target.closest('[data-port]');
+
+      if (portElement) {
+        // Get the event ID and port from the target
+        const eventId = portElement.getAttribute('data-event-id');
+        const port = portElement.getAttribute('data-port') as 'top' | 'bottom' | 'left' | 'right';
+
+        if (eventId && port) {
+          // Complete the dependency creation with target info
+          dispatch({
+            type: 'UPDATE_DEPENDENCY_CREATION',
+            payload: {
+              x: e.clientX,
+              y: e.clientY,
+              toEventId: eventId,
+              toPort: port,
+            },
+          });
+
+          // Then complete the creation
+          setTimeout(() => {
+            dispatch({ type: 'COMPLETE_DEPENDENCY_CREATION' });
+          }, 0);
+
+          return;
+        }
+      }
+
+      // If not over a valid port, cancel the creation
+      dispatch({ type: 'CANCEL_DEPENDENCY_CREATION' });
+    };
+
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        dispatch({ type: 'CANCEL_DEPENDENCY_CREATION' });
+      }
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+    document.addEventListener('keydown', handleEscape);
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, [state.dependencyCreation.isCreating, dispatch]);
 
   const sidebarWidth = config.sidebarWidth;
   const timelineWidth = containerSize.width;
@@ -292,6 +394,9 @@ function SchedulerInner({ className }: { className: string }) {
           </div>
         </div>
       </div>
+
+      {/* Live dependency line during creation */}
+      <LiveDependencyLine />
     </div>
   );
 }
