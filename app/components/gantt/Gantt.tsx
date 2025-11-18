@@ -36,6 +36,7 @@ function GanttInner({ className }: { className: string }) {
   const treeScrollRef = React.useRef<HTMLDivElement>(null);
   const timelineScrollRef = React.useRef<HTMLDivElement>(null);
   const [showAddTaskModal, setShowAddTaskModal] = React.useState(false);
+  const [progressEditorTask, setProgressEditorTask] = React.useState<GanttTask | null>(null);
 
   const handleZoomIn = () => {
     dispatch({ type: 'ZOOM_IN' });
@@ -213,6 +214,24 @@ function GanttInner({ className }: { className: string }) {
         />
       )}
 
+      {/* Progress Editor Modal */}
+      {progressEditorTask && (
+        <ProgressEditorModal
+          task={progressEditorTask}
+          onClose={() => setProgressEditorTask(null)}
+          onSave={(progress) => {
+            dispatch({
+              type: 'UPDATE_TASK',
+              payload: {
+                id: progressEditorTask.id,
+                updates: { progress },
+              },
+            });
+            setProgressEditorTask(null);
+          }}
+        />
+      )}
+
       {/* Context Menu */}
       {state.contextMenu.isOpen && state.contextMenu.taskId && (() => {
         const task = state.tasks.find(t => t.id === state.contextMenu.taskId);
@@ -258,17 +277,7 @@ function GanttInner({ className }: { className: string }) {
             label: 'Set Progress',
             icon: '📈',
             onClick: () => {
-              const newProgress = prompt('Enter progress (0-100):', task.progress.toString());
-              if (newProgress !== null) {
-                const progress = Math.min(100, Math.max(0, parseInt(newProgress, 10) || 0));
-                dispatch({
-                  type: 'UPDATE_TASK',
-                  payload: {
-                    id: task.id,
-                    updates: { progress },
-                  },
-                });
-              }
+              setProgressEditorTask(task);
             },
           },
           { divider: true } as ContextMenuItem,
@@ -416,6 +425,101 @@ function AddTaskModal({ onClose, onAdd }: AddTaskModalProps) {
               className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded transition-colors"
             >
               Add Task
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+interface ProgressEditorModalProps {
+  task: GanttTask;
+  onClose: () => void;
+  onSave: (progress: number) => void;
+}
+
+function ProgressEditorModal({ task, onClose, onSave }: ProgressEditorModalProps) {
+  const [progress, setProgress] = React.useState(task.progress);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onSave(progress);
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+      <div className="bg-slate-800 rounded-lg shadow-xl p-6 w-96 border border-slate-700">
+        <h2 className="text-xl font-bold text-white mb-4">
+          Set Progress: {task.name}
+        </h2>
+
+        <form onSubmit={handleSubmit}>
+          {/* Progress Slider */}
+          <div className="mb-6">
+            <label className="block text-sm font-medium text-slate-300 mb-3">
+              Progress: {progress}%
+            </label>
+
+            {/* Visual progress bar */}
+            <div className="mb-4 h-8 bg-slate-700 rounded-lg overflow-hidden">
+              <div
+                className="h-full bg-gradient-to-r from-green-600 to-green-400 transition-all duration-150 flex items-center justify-center"
+                style={{ width: `${progress}%` }}
+              >
+                {progress > 10 && (
+                  <span className="text-white text-xs font-bold">{progress}%</span>
+                )}
+              </div>
+            </div>
+
+            {/* Range slider */}
+            <input
+              type="range"
+              min="0"
+              max="100"
+              step="5"
+              value={progress}
+              onChange={(e) => setProgress(parseInt(e.target.value, 10))}
+              className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-green-500"
+              autoFocus
+            />
+
+            {/* Quick buttons */}
+            <div className="flex gap-2 mt-3">
+              {[0, 25, 50, 75, 100].map((value) => (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => setProgress(value)}
+                  className={`
+                    flex-1 px-2 py-1 text-xs rounded transition-colors
+                    ${progress === value
+                      ? 'bg-green-600 text-white'
+                      : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                    }
+                  `}
+                >
+                  {value}%
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Buttons */}
+          <div className="flex justify-end gap-2 mt-6">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded transition-colors"
+            >
+              Save
             </button>
           </div>
         </form>
