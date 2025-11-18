@@ -24,15 +24,18 @@ export function LiveDependencyLine() {
       // Vertical flow first for top/bottom ports
       const direction = fromPort === 'top' ? -1 : 1;
 
-      if (Math.abs(dx) < minGap) {
-        // Nearly vertical - straight line
+      // If perfectly aligned vertically, draw simple straight line
+      if (Math.abs(dx) < 10) {
         return `M ${fromX} ${fromY} L ${currentX} ${currentY}`;
       }
 
-      // Elbow connector: vertical -> horizontal -> vertical
-      const outY = fromY + (direction * verticalOffset);
+      // Always use elbow routing for vertical ports to ensure proper arrowhead direction
+      // If close vertically, use small offset for compact elbow
+      const offset = Math.abs(dy) < verticalOffset * 2 ? 15 : verticalOffset;
+      const outY = fromY + (direction * offset);
       const midX = fromX + (dx / 2);
 
+      // Proper elbow: vertical out -> horizontal -> to cursor
       return `M ${fromX} ${fromY}
               L ${fromX} ${outY}
               L ${midX} ${outY}
@@ -78,19 +81,19 @@ export function LiveDependencyLine() {
       style={{ position: 'fixed' }}
     >
       <defs>
+        {/* Simple triangle arrowhead for live line */}
         <marker
           id="live-arrowhead"
           viewBox="0 0 10 10"
-          refX="9"
+          refX="10"
           refY="5"
-          markerWidth="6"
-          markerHeight="6"
+          markerWidth="4"
+          markerHeight="4"
           orient="auto"
         >
           <path
-            d="M 0 0 L 10 5 L 0 10 L 3 5 z"
+            d="M 0 0 L 10 5 L 0 10 z"
             fill="#60a5fa"
-            className="transition-colors"
           />
         </marker>
       </defs>

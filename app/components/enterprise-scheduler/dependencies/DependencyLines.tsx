@@ -153,20 +153,19 @@ export function DependencyLines({ scrollLeft, scrollTop, rowHeight }: Dependency
       preserveAspectRatio="xMidYMid meet"
     >
       <defs>
-        {/* Modern arrow marker */}
+        {/* Simple triangle arrowhead */}
         <marker
           id="arrowhead"
           viewBox="0 0 10 10"
-          refX="9"
+          refX="10"
           refY="5"
-          markerWidth="6"
-          markerHeight="6"
+          markerWidth="4"
+          markerHeight="4"
           orient="auto"
         >
           <path
-            d="M 0 0 L 10 5 L 0 10 L 3 5 z"
+            d="M 0 0 L 10 5 L 0 10 z"
             fill="currentColor"
-            className="transition-colors"
           />
         </marker>
 
@@ -214,12 +213,37 @@ function DependencyPath({ dependency, fromX, fromY, toX, toY, color }: Dependenc
 
     // Case 1: Both ports are vertical (top/bottom)
     if (fromVertical && toVertical) {
-      if (Math.abs(dx) < minGap) {
+      // Check if this is a natural vertical flow (bottom→top or top→bottom)
+      const isNaturalVerticalFlow =
+        (fromPort === 'bottom' && toPort === 'top' && dy > 0) || // downward
+        (fromPort === 'top' && toPort === 'bottom' && dy < 0);   // upward
+
+      // If natural vertical flow and perfectly aligned horizontally, draw simple straight line
+      if (isNaturalVerticalFlow && Math.abs(dx) < 10) {
         return `M ${fromX} ${fromY} L ${toX} ${toY}`;
       }
 
+      // For vertical connections, always use elbow routing to ensure arrowhead points vertically
       const fromDir = fromPort === 'top' ? -1 : 1;
       const toDir = toPort === 'top' ? -1 : 1;
+
+      // If tasks are close vertically, use small offsets for compact elbow
+      if (Math.abs(dy) < verticalOffset * 2) {
+        const smallOffset = 15; // Small offset for compact elbows
+        const outY = fromY + (fromDir * smallOffset);
+        const inY = toY + (toDir * smallOffset);
+        const midX = fromX + (dx / 2);
+
+        // Proper elbow: vertical out -> horizontal -> vertical in
+        return `M ${fromX} ${fromY}
+                L ${fromX} ${outY}
+                L ${midX} ${outY}
+                L ${midX} ${inY}
+                L ${toX} ${inY}
+                L ${toX} ${toY}`;
+      }
+
+      // For tasks far apart, use full elbow routing
       const outY = fromY + (fromDir * verticalOffset);
       const inY = toY + (toDir * verticalOffset);
       const midX = fromX + (dx / 2);
