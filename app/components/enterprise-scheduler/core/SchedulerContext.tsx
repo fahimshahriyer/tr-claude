@@ -513,13 +513,11 @@ export function SchedulerProvider({
   }, [state, scrollContainerRef]);
 
   const navigateToToday = useCallback(() => {
-    dispatch({ type: 'NAVIGATE_TO_TODAY' });
-    // Scroll to today's position after a short delay to let the state update
-    setTimeout(() => {
-      const today = new Date();
-      scrollToDate(today);
-    }, 0);
-  }, []);
+    // Just scroll to today's position without changing the time range
+    // This preserves the current zoom level and time range
+    const today = new Date();
+    scrollToDate(today);
+  }, [scrollToDate]);
 
   const navigateToDate = useCallback((date: Date) => {
     dispatch({ type: 'NAVIGATE_TO_DATE', payload: date });
