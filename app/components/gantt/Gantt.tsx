@@ -3,6 +3,7 @@
 import React from 'react';
 import { GanttProvider } from './core/GanttContext';
 import { GanttTask, GanttDependency, GanttColumn } from './core/types';
+import { TaskTree } from './tree/TaskTree';
 
 interface GanttProps {
   tasks?: GanttTask[];
@@ -50,21 +51,8 @@ function GanttInner({ className }: { className: string }) {
       {/* Main content area */}
       <div className="flex-1 flex overflow-hidden">
         {/* Task Tree Panel (Left) */}
-        <div className="w-96 bg-slate-800 border-r border-slate-700 flex flex-col">
-          {/* Column Headers */}
-          <div className="h-10 bg-slate-700 border-b border-slate-600 flex items-center px-2">
-            <div className="flex-1 text-slate-200 text-xs font-semibold">Task Name</div>
-            <div className="w-24 text-slate-200 text-xs font-semibold">Start</div>
-            <div className="w-24 text-slate-200 text-xs font-semibold">End</div>
-            <div className="w-20 text-slate-200 text-xs font-semibold">Duration</div>
-          </div>
-
-          {/* Task Rows - placeholder */}
-          <div className="flex-1 overflow-auto">
-            <div className="flex items-center justify-center h-full">
-              <span className="text-slate-400 text-sm">Task Tree Panel</span>
-            </div>
-          </div>
+        <div className="w-[600px] border-r border-slate-700 overflow-hidden">
+          <TaskTree />
         </div>
 
         {/* Timeline Panel (Right) */}
