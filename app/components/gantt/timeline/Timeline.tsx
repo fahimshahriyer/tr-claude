@@ -136,6 +136,35 @@ export function Timeline({ scrollRef, onScroll }: TimelineProps) {
             />
           ))}
 
+          {/* Today Marker */}
+          {(() => {
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const todayOffset = (today.getTime() - timelineStart.getTime()) / dayInMs;
+            const todayX = todayOffset * zoomLevel.cellWidth;
+
+            // Only show if today is within the timeline range
+            if (todayX >= 0 && todayX <= totalWidth) {
+              return (
+                <>
+                  {/* Vertical line */}
+                  <div
+                    className="absolute top-0 bottom-0 w-0.5 bg-red-500 pointer-events-none z-30"
+                    style={{ left: todayX }}
+                  />
+                  {/* Label at top */}
+                  <div
+                    className="absolute top-0 px-2 py-1 text-xs font-semibold text-white bg-red-500 rounded-b pointer-events-none z-30"
+                    style={{ left: todayX - 20, transform: 'translateX(-50%)' }}
+                  >
+                    Today
+                  </div>
+                </>
+              );
+            }
+            return null;
+          })()}
+
           {/* Ghost Task Bar (during drag) */}
           {state.dragState.isDragging && state.dragState.ghostTask && (() => {
             const ghostTask = state.dragState.ghostTask;
