@@ -39,12 +39,23 @@ export function TimelineGrid({ height, scrollLeft }: TimelineGridProps) {
     return cols;
   }, [timeAxis.startDate, timeAxis.endDate, timeAxis.cellWidth, zoomLevel.tickSize]);
 
+  // Calculate total width for the grid
+  const totalWidth = useMemo(() => {
+    const timeDuration = timeAxis.endDate.getTime() - timeAxis.startDate.getTime();
+    const numTicks = timeDuration / zoomLevel.tickSize;
+    return numTicks * timeAxis.cellWidth;
+  }, [timeAxis.startDate, timeAxis.endDate, timeAxis.cellWidth, zoomLevel.tickSize]);
+
+  // Calculate the width occupied by columns
+  const columnsWidth = columns.length * timeAxis.cellWidth;
+  const remainingWidth = Math.max(0, totalWidth - columnsWidth);
+
   return (
     <div
       className="absolute top-0 left-0 pointer-events-none"
-      style={{ width: '100%', height: '100%' }}
+      style={{ width: totalWidth, height: '100%' }}
     >
-      <div className="relative h-full flex">
+      <div className="relative h-full flex" style={{ width: totalWidth, minWidth: totalWidth }}>
         {columns.map((col, index) => (
           <div
             key={index}
@@ -59,6 +70,16 @@ export function TimelineGrid({ height, scrollLeft }: TimelineGridProps) {
             }}
           />
         ))}
+        {/* Fill remaining space if columns don't reach totalWidth */}
+        {remainingWidth > 0 && (
+          <div
+            className="flex-shrink-0 border-r border-slate-700/50"
+            style={{
+              width: remainingWidth,
+              height: '100%',
+            }}
+          />
+        )}
       </div>
 
       {/* Today indicator */}

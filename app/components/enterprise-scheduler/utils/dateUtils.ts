@@ -126,22 +126,29 @@ export function formatDate(date: Date, format: string): string {
 
   let result = format;
 
-  // Handle [Q] for quarter
+  // Handle [Q] for quarter - use placeholder to prevent re-processing
   if (result.includes('[Q]')) {
     const quarter = Math.floor(date.getMonth() / 3) + 1;
-    result = result.replace('[Q]', quarter.toString());
+    result = result.replace(/\[Q\]/g, quarter.toString());
   }
 
-  // Handle [Week] or [w] for week number
-  if (result.includes('W')) {
-    const weekNum = getWeekNumber(date);
-    result = result.replace(/\[Week\]\s*W/, `Week ${weekNum}`);
-    result = result.replace('W[w]', `W${weekNum}`);
-    result = result.replace('W', weekNum.toString());
-  }
+  // Handle week numbers with special patterns - completely replace them first
+  const weekNum = getWeekNumber(date);
 
-  Object.keys(map).forEach((key) => {
-    result = result.replace(key, map[key]);
+  result = result.replace(/\[Week\]\s*W/g, `Week ${weekNum}`);
+  result = result.replace(/W\[w\]/g, `W${weekNum}`);
+
+  // Create a single regex that matches all format tokens, longest first
+  // This ensures "MMMM" is matched before "MMM", "MM", or "M"
+  // Note: W is excluded here since it's handled above with special patterns
+  const tokenPattern = new RegExp(
+    '(YYYY|MMMM|dddd|MMM|ddd|MM|DD|HH|mm|ss|YY|M|D|H|m|s)',
+    'g'
+  );
+
+  // Replace all tokens in a single pass
+  result = result.replace(tokenPattern, (match) => {
+    return map[match] || match;
   });
 
   return result;

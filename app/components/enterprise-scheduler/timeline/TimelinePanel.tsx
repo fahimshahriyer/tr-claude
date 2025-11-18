@@ -203,8 +203,8 @@ function GhostEvent({
     <div
       className="absolute rounded-md border-2 border-dashed border-blue-400 bg-blue-500/30 pointer-events-none z-50"
       style={{
-        left: left - scrollLeft,
-        top: top - scrollTop + 5,
+        left,
+        top: top + 5,
         width: Math.max(width, 30),
         height: rowHeight - 10,
       }}

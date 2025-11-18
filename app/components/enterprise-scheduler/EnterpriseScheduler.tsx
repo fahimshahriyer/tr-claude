@@ -36,8 +36,7 @@ export function EnterpriseScheduler({
 }
 
 function SchedulerInner({ className }: { className: string }) {
-  const { state, config, dispatch } = useScheduler();
-  const timelinePanelRef = useRef<HTMLDivElement>(null);
+  const { state, config, dispatch, scrollContainerRef } = useScheduler();
   const [scrollTop, setScrollTop] = useState(0);
   const [scrollLeft, setScrollLeft] = useState(0);
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
@@ -57,32 +56,70 @@ function SchedulerInner({ className }: { className: string }) {
     });
   }, [dispatch]);
 
-  // Handle wheel events for horizontal scrolling
+  // Handle wheel events for horizontal scrolling and zoom
   const handleWheel = useCallback((e: React.WheelEvent<HTMLDivElement>) => {
     if (e.ctrlKey || e.metaKey) {
-      // Zoom with Ctrl/Cmd + wheel
+      // Zoom with Ctrl/Cmd + wheel - prevent browser zoom
       e.preventDefault();
-      if (e.deltaY < 0) {
-        dispatch({ type: 'ZOOM_IN' });
-      } else {
-        dispatch({ type: 'ZOOM_OUT' });
+      e.stopPropagation();
+
+      // Store the current center position before zoom
+      if (scrollContainerRef.current) {
+        const container = scrollContainerRef.current;
+        const containerWidth = container.clientWidth;
+        const centerScrollLeft = container.scrollLeft + containerWidth / 2;
+
+        // Calculate what time is at the center
+        const { timeAxis, zoomLevel } = state;
+        const centerTime = timeAxis.startDate.getTime() +
+          (centerScrollLeft / timeAxis.cellWidth) * zoomLevel.tickSize;
+
+        // Perform zoom
+        if (e.deltaY < 0) {
+          dispatch({ type: 'ZOOM_IN' });
+        } else {
+          dispatch({ type: 'ZOOM_OUT' });
+        }
+
+        // After zoom, adjust scroll to keep the same time at center
+        setTimeout(() => {
+          const newZoomLevel = state.zoomLevel;
+          const newCenterPixel =
+            ((centerTime - timeAxis.startDate.getTime()) / newZoomLevel.tickSize) *
+            timeAxis.cellWidth;
+          const newScrollLeft = Math.max(0, newCenterPixel - containerWidth / 2);
+          container.scrollLeft = newScrollLeft;
+        }, 0);
       }
+      return false;
     } else if (e.shiftKey) {
       // Horizontal scroll with Shift + wheel
       e.preventDefault();
-      if (timelinePanelRef.current) {
-        timelinePanelRef.current.scrollLeft += e.deltaY;
+      if (scrollContainerRef.current) {
+        scrollContainerRef.current.scrollLeft += e.deltaY;
       }
     }
-  }, [dispatch]);
+  }, [dispatch, state, scrollContainerRef]);
+
+  // Prevent browser zoom on timeline area
+  useEffect(() => {
+    const handleWheelCapture = (e: WheelEvent) => {
+      if ((e.ctrlKey || e.metaKey) && scrollContainerRef.current?.contains(e.target as Node)) {
+        e.preventDefault();
+      }
+    };
+
+    document.addEventListener('wheel', handleWheelCapture, { passive: false });
+    return () => document.removeEventListener('wheel', handleWheelCapture);
+  }, [scrollContainerRef]);
 
   // Measure container size
   useEffect(() => {
     const updateSize = () => {
-      if (timelinePanelRef.current) {
+      if (scrollContainerRef.current) {
         setContainerSize({
-          width: timelinePanelRef.current.clientWidth,
-          height: timelinePanelRef.current.clientHeight,
+          width: scrollContainerRef.current.clientWidth,
+          height: scrollContainerRef.current.clientHeight,
         });
       }
     };
@@ -122,50 +159,82 @@ function SchedulerInner({ className }: { className: string }) {
   useEffect(() => {
     if (!state.dragState.isDragging) return;
 
+    const dragState = state.dragState;
+    const zoomLevel = state.zoomLevel;
+    const timeAxis = state.timeAxis;
+
     const handleMouseMove = (e: MouseEvent) => {
+      if (!dragState.originalEvent) return;
+
+      const deltaX = e.clientX - dragState.startX;
+      const deltaY = e.clientY - dragState.startY;
+
+      // Calculate milliseconds per pixel
+      const msPerPixel = zoomLevel.tickSize / timeAxis.cellWidth;
+      const timeDelta = deltaX * msPerPixel;
+
+      let newStartDate: Date;
+      let newEndDate: Date;
+      let newResourceId = dragState.originalEvent.resourceId;
+
+      if (dragState.dragType === 'move') {
+        // Move: shift both start and end times
+        newStartDate = new Date(dragState.originalEvent.startDate.getTime() + timeDelta);
+        newEndDate = new Date(dragState.originalEvent.endDate.getTime() + timeDelta);
+
+        // Calculate resource change based on deltaY
+        const resourceIndexDelta = Math.round(deltaY / config.rowHeight);
+        // TODO: Update resource based on resourceIndexDelta
+      } else if (dragState.dragType === 'resize-start') {
+        // Resize start: only change start time
+        newStartDate = new Date(dragState.originalEvent.startDate.getTime() + timeDelta);
+        newEndDate = dragState.originalEvent.endDate;
+
+        // Ensure start doesn't go past end
+        if (newStartDate >= newEndDate) {
+          newStartDate = new Date(newEndDate.getTime() - config.minEventDuration * 60 * 1000);
+        }
+      } else if (dragState.dragType === 'resize-end') {
+        // Resize end: only change end time
+        newStartDate = dragState.originalEvent.startDate;
+        newEndDate = new Date(dragState.originalEvent.endDate.getTime() + timeDelta);
+
+        // Ensure end doesn't go before start
+        if (newEndDate <= newStartDate) {
+          newEndDate = new Date(newStartDate.getTime() + config.minEventDuration * 60 * 1000);
+        }
+      } else {
+        return; // Unknown drag type
+      }
+
       dispatch({
         type: 'SET_DRAG_STATE',
         payload: {
           currentX: e.clientX,
           currentY: e.clientY,
+          ghostEvent: {
+            ...dragState.originalEvent,
+            startDate: newStartDate,
+            endDate: newEndDate,
+            resourceId: newResourceId,
+          },
         },
       });
-
-      // Update ghost event position based on drag type
-      if (state.dragState.dragType === 'move' && state.dragState.originalEvent) {
-        const deltaX = e.clientX - state.dragState.startX;
-        const deltaY = e.clientY - state.dragState.startY;
-
-        const pixelsPerMs = config.snapIncrement * 60 * 1000 / state.timeAxis.cellWidth;
-        const timeDelta = deltaX * pixelsPerMs;
-
-        const newStartDate = new Date(state.dragState.originalEvent.startDate.getTime() + timeDelta);
-        const newEndDate = new Date(state.dragState.originalEvent.endDate.getTime() + timeDelta);
-
-        dispatch({
-          type: 'SET_DRAG_STATE',
-          payload: {
-            ghostEvent: {
-              ...state.dragState.originalEvent,
-              startDate: newStartDate,
-              endDate: newEndDate,
-            },
-          },
-        });
-      }
     };
 
     const handleMouseUp = (e: MouseEvent) => {
-      if (state.dragState.ghostEvent && state.dragState.eventId) {
+      e.preventDefault();
+
+      if (dragState.ghostEvent && dragState.eventId) {
         // Commit the drag operation
         dispatch({
           type: 'UPDATE_EVENT',
           payload: {
-            id: state.dragState.eventId,
+            id: dragState.eventId,
             updates: {
-              startDate: state.dragState.ghostEvent.startDate,
-              endDate: state.dragState.ghostEvent.endDate,
-              resourceId: state.dragState.ghostEvent.resourceId,
+              startDate: dragState.ghostEvent.startDate,
+              endDate: dragState.ghostEvent.endDate,
+              resourceId: dragState.ghostEvent.resourceId,
             },
           },
         });
@@ -181,7 +250,7 @@ function SchedulerInner({ className }: { className: string }) {
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
     };
-  }, [state.dragState, state.timeAxis, config, dispatch]);
+  }, [state.dragState.isDragging, dispatch, config.rowHeight, config.minEventDuration]);
 
   const sidebarWidth = config.sidebarWidth;
   const timelineWidth = containerSize.width;
@@ -205,7 +274,7 @@ function SchedulerInner({ className }: { className: string }) {
         <div className="flex-1 flex flex-col overflow-hidden">
           {/* Timeline panel with events */}
           <div
-            ref={timelinePanelRef}
+            ref={scrollContainerRef}
             className="flex-1 overflow-auto"
             onScroll={handleScroll}
             onWheel={handleWheel}
