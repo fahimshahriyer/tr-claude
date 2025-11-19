@@ -16,6 +16,9 @@ export function TaskRow({ task, columns }: TaskRowProps) {
   const isSelected = selection.selectedTaskIds.includes(task.id);
   const hasChildren = task.children && task.children.length > 0;
 
+  // Calculate total column width for consistent alignment
+  const totalColumnWidth = columns.reduce((sum, col) => sum + col.width, 0);
+
   const handleClick = () => {
     dispatch({ type: 'SELECT_TASK', payload: task.id });
   };
@@ -75,6 +78,7 @@ export function TaskRow({ task, columns }: TaskRowProps) {
         hover:bg-slate-700/50 transition-colors
         ${isSelected ? 'bg-blue-600/20 border-l-4 border-l-blue-500' : ''}
       `}
+      style={{ minWidth: totalColumnWidth }}
       onClick={handleClick}
       onContextMenu={handleContextMenu}
     >
@@ -85,7 +89,7 @@ export function TaskRow({ task, columns }: TaskRowProps) {
         return (
           <div
             key={column.id}
-            className="px-3 text-slate-200 text-sm flex items-center border-r border-slate-600/30"
+            className="px-3 text-slate-200 text-sm flex items-center border-r border-slate-600/30 flex-shrink-0"
             style={{ width: column.width }}
             onDoubleClick={(e) => handleCellDoubleClick(e, field)}
           >

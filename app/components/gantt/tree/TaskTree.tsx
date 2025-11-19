@@ -43,41 +43,44 @@ export function TaskTree({ scrollRef, onScroll }: TaskTreeProps) {
   }, [columns]);
 
   return (
-    <div className="flex flex-col h-full bg-slate-800">
-      {/* Column Headers */}
-      <div
-        className="flex-shrink-0 h-10 bg-slate-700 border-b border-slate-600 flex items-center sticky top-0 z-10"
-        style={{ width: totalColumnWidth }}
-      >
-        {columns.map((column) => (
-          <div
-            key={column.id}
-            className="px-3 text-slate-200 text-xs font-semibold flex items-center border-r border-slate-600"
-            style={{ width: column.width }}
-          >
-            {column.title}
-          </div>
-        ))}
-      </div>
-
-      {/* Task Rows */}
+    <div className="flex flex-col h-full bg-slate-800 overflow-hidden">
+      {/* Scrollable container with sticky header */}
       <div
         ref={scrollRef}
         className="flex-1 overflow-auto"
         onScroll={onScroll}
       >
+        {/* Column Headers - Sticky within scroll container */}
+        <div
+          className="sticky top-0 z-10 h-10 bg-slate-700 border-b border-slate-600 flex items-center"
+          style={{ minWidth: totalColumnWidth }}
+        >
+          {columns.map((column) => (
+            <div
+              key={column.id}
+              className="px-3 text-slate-200 text-xs font-semibold flex items-center border-r border-slate-600 flex-shrink-0"
+              style={{ width: column.width }}
+            >
+              {column.title}
+            </div>
+          ))}
+        </div>
+
+        {/* Task Rows */}
         {visibleTasks.length === 0 ? (
           <div className="flex items-center justify-center h-full">
             <span className="text-slate-400 text-sm">No tasks</span>
           </div>
         ) : (
-          visibleTasks.map((task) => (
-            <TaskRow
-              key={task.id}
-              task={task}
-              columns={columns}
-            />
-          ))
+          <div style={{ minWidth: totalColumnWidth }}>
+            {visibleTasks.map((task) => (
+              <TaskRow
+                key={task.id}
+                task={task}
+                columns={columns}
+              />
+            ))}
+          </div>
         )}
       </div>
     </div>
