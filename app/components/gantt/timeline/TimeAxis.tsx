@@ -80,7 +80,7 @@ export function TimeAxis({ startDate, endDate, zoomLevel }: TimeAxisProps) {
     <div className="bg-slate-800 border-b border-slate-700">
       {/* Top Tier (if exists) */}
       {topTier && (
-        <div className="h-8 flex border-b border-slate-600">
+        <div className="h-5 flex border-b border-slate-600">
           {topTier.map((item, i) => (
             <div
               key={i}
@@ -94,7 +94,7 @@ export function TimeAxis({ startDate, endDate, zoomLevel }: TimeAxisProps) {
       )}
 
       {/* Bottom Tier */}
-      <div className="h-8 flex">
+      <div className={topTier ? "h-5 flex" : "h-10 flex"}>
         {bottomTier.map((item, i) => (
           <div
             key={i}

@@ -59,38 +59,24 @@ export function Timeline({ scrollRef, onScroll }: TimelineProps) {
 
   const rowHeight = 40; // Match task tree row height
 
-  const headerScrollRef = React.useRef<HTMLDivElement>(null);
-
-  // Sync horizontal scroll between header and content
-  const handleContentScroll = (e: React.UIEvent<HTMLDivElement>) => {
-    if (headerScrollRef.current) {
-      headerScrollRef.current.scrollLeft = e.currentTarget.scrollLeft;
-    }
-    // Also call the parent onScroll for vertical sync
-    onScroll?.(e);
-  };
-
   return (
     <div className="flex flex-col h-full bg-slate-900 overflow-hidden">
-      {/* Time Axis Header - Scrolls horizontally with content */}
-      <div
-        ref={headerScrollRef}
-        className="flex-shrink-0 overflow-x-hidden overflow-y-hidden"
-        style={{ height: '64px' }} // Fixed height for the time axis
-      >
-        <TimeAxis
-          startDate={timelineStart}
-          endDate={timelineEnd}
-          zoomLevel={zoomLevel}
-        />
-      </div>
-
-      {/* Timeline Grid + Task Bars */}
+      {/* Timeline Grid + Task Bars with sticky header */}
       <div
         ref={scrollRef}
         className="flex-1 overflow-auto relative"
-        onScroll={handleContentScroll}
+        onScroll={onScroll}
       >
+        {/* Time Axis Header - Sticky, scrolls horizontally with content */}
+        <div className="sticky top-0 z-20 bg-slate-900">
+          <TimeAxis
+            startDate={timelineStart}
+            endDate={timelineEnd}
+            zoomLevel={zoomLevel}
+          />
+        </div>
+
+        {/* Timeline content */}
         <div
           className="relative"
           style={{
