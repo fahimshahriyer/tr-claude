@@ -6,6 +6,7 @@ import { TimeAxis } from './TimeAxis';
 import { TaskBar } from './TaskBar';
 import { DependencyLines } from '../dependencies/DependencyLines';
 import { GanttTask } from '../core/types';
+import { eachDayOfInterval } from 'date-fns';
 
 interface TimelineProps {
   scrollRef?: React.RefObject<HTMLDivElement>;
@@ -44,6 +45,8 @@ export function Timeline({ scrollRef, onScroll }: TimelineProps) {
     if (tasks.length === 0) return new Date();
     const dates = tasks.map((t) => t.startDate.getTime());
     const minDate = new Date(Math.min(...dates));
+    // Set to start of day (midnight)
+    minDate.setHours(0, 0, 0, 0);
     // Subtract 7 days for padding
     minDate.setDate(minDate.getDate() - 7);
     return minDate;
@@ -53,14 +56,17 @@ export function Timeline({ scrollRef, onScroll }: TimelineProps) {
     if (tasks.length === 0) return new Date();
     const dates = tasks.map((t) => t.endDate.getTime());
     const maxDate = new Date(Math.max(...dates));
+    // Set to start of day (midnight)
+    maxDate.setHours(0, 0, 0, 0);
     // Add 7 days for padding
     maxDate.setDate(maxDate.getDate() + 7);
     return maxDate;
   }, [tasks]);
 
-  // Count actual days using same method as TimeAxis (eachDayOfInterval includes both endpoints)
+  // Calculate width using eachDayOfInterval to match TimeAxis exactly
   const dayInMs = 24 * 60 * 60 * 1000;
-  const totalDays = Math.round((timelineEnd.getTime() - timelineStart.getTime()) / dayInMs) + 1;
+  const allDays = eachDayOfInterval({ start: timelineStart, end: timelineEnd });
+  const totalDays = allDays.length;
   const totalWidth = totalDays * zoomLevel.cellWidth;
 
   const rowHeight = 40; // Match task tree row height
