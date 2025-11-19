@@ -13,41 +13,56 @@ interface TimeAxisProps {
 export function TimeAxis({ startDate, endDate, zoomLevel }: TimeAxisProps) {
   const { topTier, bottomTier } = useMemo(() => {
     const dayInMs = 24 * 60 * 60 * 1000;
-    const totalDays = Math.ceil((endDate.getTime() - startDate.getTime()) / dayInMs);
 
     // Based on zoom level, generate appropriate tiers
     if (zoomLevel.scale === 'week' || zoomLevel.scale === 'day') {
-      // Top tier: Months
-      const months: { label: string; width: number; start: Date }[] = [];
-      let currentDate = new Date(startDate);
+      // Bottom tier: Days first (so we know exact day count)
+      const allDays = eachDayOfInterval({ start: startDate, end: endDate });
 
-      while (currentDate < endDate) {
-        const monthStart = startOfMonth(currentDate);
-        const monthEnd = endOfMonth(currentDate);
-        const visibleStart = monthStart < startDate ? startDate : monthStart;
-        const visibleEnd = monthEnd > endDate ? endDate : monthEnd;
-
-        const days = Math.ceil((visibleEnd.getTime() - visibleStart.getTime()) / dayInMs);
-        const width = days * zoomLevel.cellWidth;
-
-        months.push({
-          label: format(currentDate, 'MMMM yyyy'),
-          width,
-          start: monthStart,
-        });
-
-        // Move to next month
-        currentDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1);
-      }
-
-      // Bottom tier: Days or Weeks
       if (zoomLevel.scale === 'day') {
-        const days = eachDayOfInterval({ start: startDate, end: endDate }).map((day) => ({
+        const days = allDays.map((day) => ({
           label: format(day, 'd'),
           width: zoomLevel.cellWidth,
           date: day,
           isWeekend: day.getDay() === 0 || day.getDay() === 6,
         }));
+
+        // Top tier: Months - calculate based on actual days rendered
+        const months: { label: string; width: number; start: Date }[] = [];
+        let currentMonth = -1;
+        let currentYear = -1;
+        let dayCount = 0;
+
+        allDays.forEach((day, index) => {
+          const month = day.getMonth();
+          const year = day.getFullYear();
+
+          if (month !== currentMonth || year !== currentYear) {
+            // New month started
+            if (currentMonth !== -1) {
+              // Save previous month
+              months.push({
+                label: format(allDays[index - dayCount], 'MMMM yyyy'),
+                width: dayCount * zoomLevel.cellWidth,
+                start: allDays[index - dayCount],
+              });
+            }
+            currentMonth = month;
+            currentYear = year;
+            dayCount = 1;
+          } else {
+            dayCount++;
+          }
+        });
+
+        // Don't forget the last month
+        if (dayCount > 0) {
+          months.push({
+            label: format(allDays[allDays.length - dayCount], 'MMMM yyyy'),
+            width: dayCount * zoomLevel.cellWidth,
+            start: allDays[allDays.length - dayCount],
+          });
+        }
 
         return { topTier: months, bottomTier: days };
       } else {
@@ -61,6 +76,39 @@ export function TimeAxis({ startDate, endDate, zoomLevel }: TimeAxisProps) {
             date: week,
           };
         });
+
+        // Months for week view
+        const months: { label: string; width: number; start: Date }[] = [];
+        let currentMonth = -1;
+        let currentYear = -1;
+        let weekCount = 0;
+
+        allDays.forEach((day, index) => {
+          const month = day.getMonth();
+          const year = day.getFullYear();
+
+          if (month !== currentMonth || year !== currentYear) {
+            if (currentMonth !== -1 && weekCount > 0) {
+              months.push({
+                label: format(allDays[index - 1], 'MMMM yyyy'),
+                width: weekCount * zoomLevel.cellWidth,
+                start: allDays[index - weekCount],
+              });
+              weekCount = 0;
+            }
+            currentMonth = month;
+            currentYear = year;
+          }
+          weekCount++;
+        });
+
+        if (weekCount > 0) {
+          months.push({
+            label: format(allDays[allDays.length - 1], 'MMMM yyyy'),
+            width: weekCount * zoomLevel.cellWidth,
+            start: allDays[allDays.length - weekCount],
+          });
+        }
 
         return { topTier: months, bottomTier: weeks };
       }

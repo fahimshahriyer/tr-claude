@@ -43,18 +43,24 @@ export function Timeline({ scrollRef, onScroll }: TimelineProps) {
   const timelineStart = useMemo(() => {
     if (tasks.length === 0) return new Date();
     const dates = tasks.map((t) => t.startDate.getTime());
-    return new Date(Math.min(...dates) - 7 * 24 * 60 * 60 * 1000); // 1 week before
+    const minDate = new Date(Math.min(...dates));
+    // Subtract 7 days for padding
+    minDate.setDate(minDate.getDate() - 7);
+    return minDate;
   }, [tasks]);
 
   const timelineEnd = useMemo(() => {
     if (tasks.length === 0) return new Date();
     const dates = tasks.map((t) => t.endDate.getTime());
-    return new Date(Math.max(...dates) + 7 * 24 * 60 * 60 * 1000); // 1 week after
+    const maxDate = new Date(Math.max(...dates));
+    // Add 7 days for padding
+    maxDate.setDate(maxDate.getDate() + 7);
+    return maxDate;
   }, [tasks]);
 
-  const timelineDuration = timelineEnd.getTime() - timelineStart.getTime();
+  // Count actual days using same method as TimeAxis (eachDayOfInterval includes both endpoints)
   const dayInMs = 24 * 60 * 60 * 1000;
-  const totalDays = Math.ceil(timelineDuration / dayInMs);
+  const totalDays = Math.round((timelineEnd.getTime() - timelineStart.getTime()) / dayInMs) + 1;
   const totalWidth = totalDays * zoomLevel.cellWidth;
 
   const rowHeight = 40; // Match task tree row height
