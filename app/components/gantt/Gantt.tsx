@@ -5,6 +5,7 @@ import { GanttProvider, useGantt } from './core/GanttContext';
 import { GanttTask, GanttDependency, GanttColumn } from './core/types';
 import { TaskTree } from './tree/TaskTree';
 import { Timeline } from './timeline/Timeline';
+import { ContextMenu, ContextMenuItem } from './ui/ContextMenu';
 
 interface GanttProps {
   tasks?: GanttTask[];
@@ -34,6 +35,8 @@ function GanttInner({ className }: { className: string }) {
   const { state, dispatch } = useGantt();
   const treeScrollRef = React.useRef<HTMLDivElement>(null);
   const timelineScrollRef = React.useRef<HTMLDivElement>(null);
+  const [showAddTaskModal, setShowAddTaskModal] = React.useState(false);
+  const [progressEditorTask, setProgressEditorTask] = React.useState<GanttTask | null>(null);
 
   const handleZoomIn = () => {
     dispatch({ type: 'ZOOM_IN' });
@@ -41,6 +44,18 @@ function GanttInner({ className }: { className: string }) {
 
   const handleZoomOut = () => {
     dispatch({ type: 'ZOOM_OUT' });
+  };
+
+  const handleAddTask = () => {
+    setShowAddTaskModal(true);
+  };
+
+  const handleToggleCalendar = () => {
+    dispatch({ type: 'TOGGLE_CALENDAR' });
+  };
+
+  const handleToggleCriticalPath = () => {
+    dispatch({ type: 'TOGGLE_CRITICAL_PATH' });
   };
 
   // Sync vertical scroll between tree and timeline
@@ -56,6 +71,64 @@ function GanttInner({ className }: { className: string }) {
     }
   };
 
+  // Keyboard navigation
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ignore if user is typing in an input
+      if (
+        e.target instanceof HTMLInputElement ||
+        e.target instanceof HTMLTextAreaElement ||
+        e.target instanceof HTMLSelectElement
+      ) {
+        return;
+      }
+
+      const selectedTaskId = state.selection.selectedTaskIds[0];
+
+      switch (e.key) {
+        case 'Delete':
+        case 'Backspace':
+          if (selectedTaskId) {
+            e.preventDefault();
+            dispatch({ type: 'DELETE_TASK', payload: selectedTaskId });
+          }
+          break;
+
+        case 'Escape':
+          e.preventDefault();
+          dispatch({ type: 'CLEAR_SELECTION' });
+          break;
+
+        case 'ArrowUp':
+        case 'ArrowDown': {
+          e.preventDefault();
+          const currentIndex = state.tasks.findIndex((t) => t.id === selectedTaskId);
+
+          if (e.key === 'ArrowUp' && currentIndex > 0) {
+            dispatch({ type: 'SELECT_TASK', payload: state.tasks[currentIndex - 1].id });
+          } else if (e.key === 'ArrowDown' && currentIndex < state.tasks.length - 1) {
+            dispatch({ type: 'SELECT_TASK', payload: state.tasks[currentIndex + 1].id });
+          } else if (!selectedTaskId && state.tasks.length > 0) {
+            // If nothing selected, select first task
+            dispatch({ type: 'SELECT_TASK', payload: state.tasks[0].id });
+          }
+          break;
+        }
+
+        case '+':
+        case 'Insert':
+          e.preventDefault();
+          setShowAddTaskModal(true);
+          break;
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [state.selection.selectedTaskIds, state.tasks, dispatch]);
+
   return (
     <div className={`h-screen flex flex-col bg-slate-900 ${className}`}>
       {/* Toolbar */}
@@ -63,9 +136,37 @@ function GanttInner({ className }: { className: string }) {
         <span className="text-white text-sm font-semibold">Gantt Chart</span>
         <div className="ml-4 flex items-center gap-2">
           <span className="text-slate-400 text-xs">Zoom: {state.zoomLevel.name}</span>
+          <span className="text-slate-600">|</span>
+          <span className="text-slate-400 text-xs">
+            Calendar: {state.useCalendar ? 'Working Days' : 'All Days'}
+          </span>
         </div>
         <div className="ml-auto flex items-center gap-2">
-          <button className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded transition-colors">
+          <button
+            onClick={handleToggleCriticalPath}
+            className={`px-3 py-1 text-white text-sm rounded transition-colors ${
+              state.showCriticalPath
+                ? 'bg-red-600 hover:bg-red-700'
+                : 'bg-slate-700 hover:bg-slate-600'
+            }`}
+            title="Toggle Critical Path highlighting"
+          >
+            {state.showCriticalPath ? '🔴 Critical Path' : '⚪ Critical Path'}
+          </button>
+          <button
+            onClick={handleToggleCalendar}
+            className={`px-3 py-1 text-white text-sm rounded transition-colors ${
+              state.useCalendar
+                ? 'bg-green-600 hover:bg-green-700'
+                : 'bg-slate-700 hover:bg-slate-600'
+            }`}
+          >
+            {state.useCalendar ? '📅 Working Days' : '📆 All Days'}
+          </button>
+          <button
+            onClick={handleAddTask}
+            className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded transition-colors"
+          >
             + Add Task
           </button>
           <button
@@ -100,6 +201,328 @@ function GanttInner({ className }: { className: string }) {
             onScroll={handleTimelineScroll}
           />
         </div>
+      </div>
+
+      {/* Add Task Modal */}
+      {showAddTaskModal && (
+        <AddTaskModal
+          onClose={() => setShowAddTaskModal(false)}
+          onAdd={(task) => {
+            dispatch({ type: 'ADD_TASK', payload: task });
+            setShowAddTaskModal(false);
+          }}
+        />
+      )}
+
+      {/* Progress Editor Modal */}
+      {progressEditorTask && (
+        <ProgressEditorModal
+          task={progressEditorTask}
+          onClose={() => setProgressEditorTask(null)}
+          onSave={(progress) => {
+            dispatch({
+              type: 'UPDATE_TASK',
+              payload: {
+                id: progressEditorTask.id,
+                updates: { progress },
+              },
+            });
+            setProgressEditorTask(null);
+          }}
+        />
+      )}
+
+      {/* Context Menu */}
+      {state.contextMenu.isOpen && state.contextMenu.taskId && (() => {
+        const task = state.tasks.find(t => t.id === state.contextMenu.taskId);
+        if (!task) return null;
+
+        const menuItems: ContextMenuItem[] = [
+          {
+            label: 'Edit Task',
+            icon: '✏️',
+            onClick: () => {
+              // TODO: Open edit modal
+              console.log('Edit task:', task.id);
+            },
+          },
+          {
+            label: task.type === 'milestone' ? 'Convert to Task' : 'Convert to Milestone',
+            icon: task.type === 'milestone' ? '📊' : '💎',
+            onClick: () => {
+              dispatch({
+                type: 'UPDATE_TASK',
+                payload: {
+                  id: task.id,
+                  updates: {
+                    type: task.type === 'milestone' ? 'task' : 'milestone',
+                  },
+                },
+              });
+            },
+          },
+          {
+            label: task.expanded ? 'Collapse' : 'Expand',
+            icon: task.expanded ? '➖' : '➕',
+            onClick: () => {
+              dispatch({
+                type: task.expanded ? 'COLLAPSE_TASK' : 'EXPAND_TASK',
+                payload: task.id,
+              });
+            },
+            disabled: !task.children || task.children.length === 0,
+          },
+          { divider: true } as ContextMenuItem,
+          {
+            label: 'Set Progress',
+            icon: '📈',
+            onClick: () => {
+              setProgressEditorTask(task);
+            },
+          },
+          { divider: true } as ContextMenuItem,
+          {
+            label: 'Delete Task',
+            icon: '🗑️',
+            danger: true,
+            onClick: () => {
+              if (confirm(`Delete task "${task.name}"?`)) {
+                dispatch({ type: 'DELETE_TASK', payload: task.id });
+              }
+            },
+          },
+        ];
+
+        return (
+          <ContextMenu
+            x={state.contextMenu.x}
+            y={state.contextMenu.y}
+            items={menuItems}
+            onClose={() => dispatch({ type: 'CLOSE_CONTEXT_MENU' })}
+          />
+        );
+      })()}
+    </div>
+  );
+}
+
+interface AddTaskModalProps {
+  onClose: () => void;
+  onAdd: (task: GanttTask) => void;
+}
+
+function AddTaskModal({ onClose, onAdd }: AddTaskModalProps) {
+  const [name, setName] = React.useState('');
+  const [startDate, setStartDate] = React.useState(
+    new Date().toISOString().split('T')[0]
+  );
+  const [duration, setDuration] = React.useState('5');
+  const [type, setType] = React.useState<'task' | 'milestone' | 'summary'>('task');
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+
+    const start = new Date(startDate);
+    const durationNum = parseInt(duration, 10);
+    const end = new Date(start);
+    end.setDate(end.getDate() + (type === 'milestone' ? 0 : durationNum));
+
+    const newTask: GanttTask = {
+      id: `task-${Date.now()}`,
+      name: name || 'New Task',
+      type,
+      startDate: start,
+      endDate: end,
+      duration: type === 'milestone' ? 0 : durationNum,
+      progress: 0,
+      parentId: null,
+      children: [],
+      level: 0,
+      expanded: false,
+      color: type === 'milestone' ? '#14b8a6' : type === 'summary' ? '#3b82f6' : '#10b981',
+    };
+
+    onAdd(newTask);
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+      <div className="bg-slate-800 rounded-lg shadow-xl p-6 w-96 border border-slate-700">
+        <h2 className="text-xl font-bold text-white mb-4">Add New Task</h2>
+
+        <form onSubmit={handleSubmit}>
+          {/* Task Name */}
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-slate-300 mb-2">
+              Task Name
+            </label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="Enter task name"
+              autoFocus
+            />
+          </div>
+
+          {/* Task Type */}
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-slate-300 mb-2">
+              Task Type
+            </label>
+            <select
+              value={type}
+              onChange={(e) => setType(e.target.value as 'task' | 'milestone' | 'summary')}
+              className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="task">Task</option>
+              <option value="milestone">Milestone</option>
+              <option value="summary">Summary</option>
+            </select>
+          </div>
+
+          {/* Start Date */}
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-slate-300 mb-2">
+              Start Date
+            </label>
+            <input
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+
+          {/* Duration */}
+          {type !== 'milestone' && (
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-slate-300 mb-2">
+                Duration (days)
+              </label>
+              <input
+                type="number"
+                value={duration}
+                onChange={(e) => setDuration(e.target.value)}
+                min="1"
+                className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+          )}
+
+          {/* Buttons */}
+          <div className="flex justify-end gap-2 mt-6">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded transition-colors"
+            >
+              Add Task
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+interface ProgressEditorModalProps {
+  task: GanttTask;
+  onClose: () => void;
+  onSave: (progress: number) => void;
+}
+
+function ProgressEditorModal({ task, onClose, onSave }: ProgressEditorModalProps) {
+  const [progress, setProgress] = React.useState(task.progress);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onSave(progress);
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+      <div className="bg-slate-800 rounded-lg shadow-xl p-6 w-96 border border-slate-700">
+        <h2 className="text-xl font-bold text-white mb-4">
+          Set Progress: {task.name}
+        </h2>
+
+        <form onSubmit={handleSubmit}>
+          {/* Progress Slider */}
+          <div className="mb-6">
+            <label className="block text-sm font-medium text-slate-300 mb-3">
+              Progress: {progress}%
+            </label>
+
+            {/* Visual progress bar */}
+            <div className="mb-4 h-8 bg-slate-700 rounded-lg overflow-hidden">
+              <div
+                className="h-full bg-gradient-to-r from-green-600 to-green-400 transition-all duration-150 flex items-center justify-center"
+                style={{ width: `${progress}%` }}
+              >
+                {progress > 10 && (
+                  <span className="text-white text-xs font-bold">{progress}%</span>
+                )}
+              </div>
+            </div>
+
+            {/* Range slider */}
+            <input
+              type="range"
+              min="0"
+              max="100"
+              step="5"
+              value={progress}
+              onChange={(e) => setProgress(parseInt(e.target.value, 10))}
+              className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-green-500"
+              autoFocus
+            />
+
+            {/* Quick buttons */}
+            <div className="flex gap-2 mt-3">
+              {[0, 25, 50, 75, 100].map((value) => (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => setProgress(value)}
+                  className={`
+                    flex-1 px-2 py-1 text-xs rounded transition-colors
+                    ${progress === value
+                      ? 'bg-green-600 text-white'
+                      : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                    }
+                  `}
+                >
+                  {value}%
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Buttons */}
+          <div className="flex justify-end gap-2 mt-6">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded transition-colors"
+            >
+              Save
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   );

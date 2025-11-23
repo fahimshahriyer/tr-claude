@@ -2,7 +2,7 @@
 
 import React, { useMemo } from 'react';
 import { ZoomLevel } from '../core/types';
-import { startOfMonth, endOfMonth, eachDayOfInterval, format, startOfWeek, endOfWeek, eachWeekOfInterval } from 'date-fns';
+import { eachDayOfInterval, format, endOfWeek, eachWeekOfInterval } from 'date-fns';
 
 interface TimeAxisProps {
   startDate: Date;
@@ -12,62 +12,102 @@ interface TimeAxisProps {
 
 export function TimeAxis({ startDate, endDate, zoomLevel }: TimeAxisProps) {
   const { topTier, bottomTier } = useMemo(() => {
-    const dayInMs = 24 * 60 * 60 * 1000;
-    const totalDays = Math.ceil((endDate.getTime() - startDate.getTime()) / dayInMs);
+    // Normalize all dates to midnight to avoid time-of-day issues
+    const normalizedStart = new Date(startDate);
+    normalizedStart.setHours(0, 0, 0, 0);
+    const normalizedEnd = new Date(endDate);
+    normalizedEnd.setHours(0, 0, 0, 0);
+
+    // Generate all days in the range - this is our base grid
+    const allDays = eachDayOfInterval({ start: normalizedStart, end: normalizedEnd });
+
+    // Helper to build month headers from day array
+    const buildMonthHeaders = () => {
+      const months: { label: string; width: number; start: Date }[] = [];
+      let currentMonth = -1;
+      let currentYear = -1;
+      let dayCount = 0;
+
+      allDays.forEach((day, index) => {
+        const month = day.getMonth();
+        const year = day.getFullYear();
+
+        if (month !== currentMonth || year !== currentYear) {
+          // New month started
+          if (currentMonth !== -1) {
+            // Save previous month
+            months.push({
+              label: format(allDays[index - dayCount], 'MMMM yyyy'),
+              width: dayCount * zoomLevel.cellWidth,
+              start: allDays[index - dayCount],
+            });
+          }
+          currentMonth = month;
+          currentYear = year;
+          dayCount = 1;
+        } else {
+          dayCount++;
+        }
+      });
+
+      // Don't forget the last month
+      if (dayCount > 0) {
+        months.push({
+          label: format(allDays[allDays.length - dayCount], 'MMMM yyyy'),
+          width: dayCount * zoomLevel.cellWidth,
+          start: allDays[allDays.length - dayCount],
+        });
+      }
+
+      return months;
+    };
 
     // Based on zoom level, generate appropriate tiers
-    if (zoomLevel.scale === 'week' || zoomLevel.scale === 'day') {
-      // Top tier: Months
-      const months: { label: string; width: number; start: Date }[] = [];
-      let currentDate = new Date(startDate);
+    if (zoomLevel.scale === 'day') {
+      const days = allDays.map((day) => ({
+        label: format(day, 'd'),
+        width: zoomLevel.cellWidth,
+        date: day,
+        isWeekend: day.getDay() === 0 || day.getDay() === 6,
+      }));
 
-      while (currentDate < endDate) {
-        const monthStart = startOfMonth(currentDate);
-        const monthEnd = endOfMonth(currentDate);
-        const visibleStart = monthStart < startDate ? startDate : monthStart;
-        const visibleEnd = monthEnd > endDate ? endDate : monthEnd;
+      return { topTier: buildMonthHeaders(), bottomTier: days };
+    } else if (zoomLevel.scale === 'week') {
+      // For week view: generate week cells where each week spans the actual days it contains
+      const weeks: { label: string; width: number; date: Date }[] = [];
 
-        const days = Math.ceil((visibleEnd.getTime() - visibleStart.getTime()) / dayInMs);
-        const width = days * zoomLevel.cellWidth;
+      // Track which day index we're at
+      let dayIndex = 0;
 
-        months.push({
-          label: format(currentDate, 'MMMM yyyy'),
-          width,
-          start: monthStart,
+      while (dayIndex < allDays.length) {
+        const currentDay = allDays[dayIndex];
+        const weekStart = currentDay;
+        const weekEnd = endOfWeek(currentDay);
+
+        // Count consecutive days that belong to this week
+        let daysInThisWeek = 0;
+        while (dayIndex < allDays.length) {
+          const day = allDays[dayIndex];
+          if (day <= weekEnd) {
+            daysInThisWeek++;
+            dayIndex++;
+          } else {
+            break;
+          }
+        }
+
+        weeks.push({
+          label: format(weekStart, 'w'),
+          width: daysInThisWeek * zoomLevel.cellWidth,
+          date: weekStart,
         });
-
-        // Move to next month
-        currentDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1);
       }
 
-      // Bottom tier: Days or Weeks
-      if (zoomLevel.scale === 'day') {
-        const days = eachDayOfInterval({ start: startDate, end: endDate }).map((day) => ({
-          label: format(day, 'd'),
-          width: zoomLevel.cellWidth,
-          date: day,
-          isWeekend: day.getDay() === 0 || day.getDay() === 6,
-        }));
-
-        return { topTier: months, bottomTier: days };
-      } else {
-        // Weeks
-        const weeks = eachWeekOfInterval({ start: startDate, end: endDate }).map((week) => {
-          const weekEnd = endOfWeek(week);
-          const days = Math.ceil((weekEnd.getTime() - week.getTime()) / dayInMs);
-          return {
-            label: format(week, 'w'),
-            width: days * zoomLevel.cellWidth,
-            date: week,
-          };
-        });
-
-        return { topTier: months, bottomTier: weeks };
-      }
+      return { topTier: buildMonthHeaders(), bottomTier: weeks };
     }
 
     // Default: show days
-    const days = eachDayOfInterval({ start: startDate, end: endDate }).map((day) => ({
+    const days = allDays.map((day) => ({
       label: format(day, 'MMM d'),
       width: zoomLevel.cellWidth,
       date: day,
@@ -80,7 +120,7 @@ export function TimeAxis({ startDate, endDate, zoomLevel }: TimeAxisProps) {
     <div className="bg-slate-800 border-b border-slate-700">
       {/* Top Tier (if exists) */}
       {topTier && (
-        <div className="h-8 flex border-b border-slate-600">
+        <div className="h-5 flex border-b border-slate-600">
           {topTier.map((item, i) => (
             <div
               key={i}
@@ -94,7 +134,7 @@ export function TimeAxis({ startDate, endDate, zoomLevel }: TimeAxisProps) {
       )}
 
       {/* Bottom Tier */}
-      <div className="h-8 flex">
+      <div className={topTier ? "h-5 flex" : "h-10 flex"}>
         {bottomTier.map((item, i) => (
           <div
             key={i}

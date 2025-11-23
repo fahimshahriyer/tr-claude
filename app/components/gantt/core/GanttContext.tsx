@@ -10,6 +10,7 @@ import {
   DEFAULT_CALENDAR,
   DEFAULT_ZOOM_LEVELS,
 } from './types';
+import { calculateCriticalPath } from './criticalPath';
 
 // Action types
 type GanttAction =
@@ -27,7 +28,15 @@ type GanttAction =
   | { type: 'START_DRAG'; payload: { taskId: string; dragType: 'move' | 'resize-start' | 'resize-end'; startX: number; startY: number } }
   | { type: 'UPDATE_DRAG'; payload: { currentX: number; currentY: number; ghostTask: GanttTask } }
   | { type: 'END_DRAG' }
-  | { type: 'CANCEL_DRAG' };
+  | { type: 'CANCEL_DRAG' }
+  | { type: 'TOGGLE_CALENDAR' }
+  | { type: 'TOGGLE_CRITICAL_PATH' }
+  | { type: 'OPEN_CONTEXT_MENU'; payload: { x: number; y: number; taskId: string } }
+  | { type: 'CLOSE_CONTEXT_MENU' }
+  | { type: 'START_INLINE_EDIT'; payload: { taskId: string; field: keyof GanttTask; value: string } }
+  | { type: 'UPDATE_INLINE_EDIT'; payload: string }
+  | { type: 'SAVE_INLINE_EDIT' }
+  | { type: 'CANCEL_INLINE_EDIT' };
 
 // Reducer
 function ganttReducer(state: GanttState, action: GanttAction): GanttState {
@@ -213,6 +222,131 @@ function ganttReducer(state: GanttState, action: GanttAction): GanttState {
         },
       };
 
+    case 'TOGGLE_CALENDAR':
+      return {
+        ...state,
+        useCalendar: !state.useCalendar,
+      };
+
+    case 'TOGGLE_CRITICAL_PATH': {
+      const newShowCriticalPath = !state.showCriticalPath;
+      let schedules = state.criticalPathSchedules;
+
+      // Calculate critical path if enabling and not yet calculated
+      if (newShowCriticalPath && !schedules) {
+        schedules = calculateCriticalPath(state.tasks, state.dependencies);
+      }
+
+      return {
+        ...state,
+        showCriticalPath: newShowCriticalPath,
+        criticalPathSchedules: schedules,
+      };
+    }
+
+    case 'OPEN_CONTEXT_MENU':
+      return {
+        ...state,
+        contextMenu: {
+          isOpen: true,
+          x: action.payload.x,
+          y: action.payload.y,
+          taskId: action.payload.taskId,
+        },
+      };
+
+    case 'CLOSE_CONTEXT_MENU':
+      return {
+        ...state,
+        contextMenu: {
+          isOpen: false,
+          x: 0,
+          y: 0,
+          taskId: null,
+        },
+      };
+
+    case 'START_INLINE_EDIT':
+      return {
+        ...state,
+        inlineEdit: {
+          isEditing: true,
+          taskId: action.payload.taskId,
+          field: action.payload.field,
+          value: action.payload.value,
+        },
+      };
+
+    case 'UPDATE_INLINE_EDIT':
+      return {
+        ...state,
+        inlineEdit: {
+          ...state.inlineEdit,
+          value: action.payload,
+        },
+      };
+
+    case 'SAVE_INLINE_EDIT': {
+      if (!state.inlineEdit.isEditing || !state.inlineEdit.taskId || !state.inlineEdit.field) {
+        return state;
+      }
+
+      const field = state.inlineEdit.field;
+      const value = state.inlineEdit.value;
+      let updates: Partial<GanttTask> = {};
+
+      // Parse value based on field type
+      if (field === 'name') {
+        updates.name = value;
+      } else if (field === 'startDate' || field === 'endDate') {
+        const date = new Date(value);
+        if (!isNaN(date.getTime())) {
+          updates[field] = date;
+        }
+      } else if (field === 'duration') {
+        const duration = parseInt(value, 10);
+        if (!isNaN(duration) && duration > 0) {
+          updates.duration = duration;
+          // Recalculate end date
+          const task = state.tasks.find(t => t.id === state.inlineEdit.taskId);
+          if (task) {
+            const endDate = new Date(task.startDate);
+            endDate.setDate(endDate.getDate() + duration);
+            updates.endDate = endDate;
+          }
+        }
+      } else if (field === 'progress') {
+        const progress = parseInt(value, 10);
+        if (!isNaN(progress)) {
+          updates.progress = Math.min(100, Math.max(0, progress));
+        }
+      }
+
+      return {
+        ...state,
+        tasks: state.tasks.map(t =>
+          t.id === state.inlineEdit.taskId ? { ...t, ...updates } : t
+        ),
+        inlineEdit: {
+          isEditing: false,
+          taskId: null,
+          field: null,
+          value: '',
+        },
+      };
+    }
+
+    case 'CANCEL_INLINE_EDIT':
+      return {
+        ...state,
+        inlineEdit: {
+          isEditing: false,
+          taskId: null,
+          field: null,
+          value: '',
+        },
+      };
+
     default:
       return state;
   }
@@ -278,10 +412,24 @@ export function GanttProvider({
         originalTask: null,
         ghostTask: null,
       },
+      contextMenu: {
+        isOpen: false,
+        x: 0,
+        y: 0,
+        taskId: null,
+      },
+      inlineEdit: {
+        isEditing: false,
+        taskId: null,
+        field: null,
+        value: '',
+      },
       baselines: [],
       showCriticalPath: false,
+      criticalPathSchedules: null,
       showBaseline: false,
       autoSchedule: false,
+      useCalendar: false,
       undoStack: [],
       redoStack: [],
     }),

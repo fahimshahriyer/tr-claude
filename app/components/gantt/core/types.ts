@@ -113,6 +113,20 @@ export interface SelectionState {
   anchorTaskId: string | null; // for shift-click range select
 }
 
+export interface ContextMenuState {
+  isOpen: boolean;
+  x: number;
+  y: number;
+  taskId: string | null;
+}
+
+export interface InlineEditState {
+  isEditing: boolean;
+  taskId: string | null;
+  field: keyof GanttTask | null;
+  value: string;
+}
+
 export interface ViewportState {
   scrollLeft: number;
   scrollTop: number;
@@ -131,10 +145,14 @@ export interface GanttState {
   viewport: ViewportState;
   selection: SelectionState;
   dragState: DragState;
+  contextMenu: ContextMenuState;
+  inlineEdit: InlineEditState;
   baselines: GanttBaseline[];
   showCriticalPath: boolean;
+  criticalPathSchedules: Map<string, any> | null; // TaskSchedule map
   showBaseline: boolean;
   autoSchedule: boolean;
+  useCalendar: boolean; // Whether to use calendar for date calculations
   undoStack: GanttState[];
   redoStack: GanttState[];
 }
@@ -236,6 +254,16 @@ export const DEFAULT_COLUMNS: GanttColumn[] = [
     resizable: true,
     sortable: true,
     editable: true,
+    visible: true,
+  },
+  {
+    id: 'slack',
+    title: 'Slack',
+    field: 'id', // We'll use custom renderer to get slack from schedules
+    width: 80,
+    resizable: true,
+    sortable: false,
+    editable: false,
     visible: true,
   },
 ];

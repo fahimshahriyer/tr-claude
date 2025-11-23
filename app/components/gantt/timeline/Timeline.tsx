@@ -6,6 +6,7 @@ import { TimeAxis } from './TimeAxis';
 import { TaskBar } from './TaskBar';
 import { DependencyLines } from '../dependencies/DependencyLines';
 import { GanttTask } from '../core/types';
+import { eachDayOfInterval } from 'date-fns';
 
 interface TimelineProps {
   scrollRef?: React.RefObject<HTMLDivElement>;
@@ -43,39 +44,51 @@ export function Timeline({ scrollRef, onScroll }: TimelineProps) {
   const timelineStart = useMemo(() => {
     if (tasks.length === 0) return new Date();
     const dates = tasks.map((t) => t.startDate.getTime());
-    return new Date(Math.min(...dates) - 7 * 24 * 60 * 60 * 1000); // 1 week before
+    const minDate = new Date(Math.min(...dates));
+    // Set to start of day (midnight)
+    minDate.setHours(0, 0, 0, 0);
+    // Subtract 7 days for padding
+    minDate.setDate(minDate.getDate() - 7);
+    return minDate;
   }, [tasks]);
 
   const timelineEnd = useMemo(() => {
     if (tasks.length === 0) return new Date();
     const dates = tasks.map((t) => t.endDate.getTime());
-    return new Date(Math.max(...dates) + 7 * 24 * 60 * 60 * 1000); // 1 week after
+    const maxDate = new Date(Math.max(...dates));
+    // Set to start of day (midnight)
+    maxDate.setHours(0, 0, 0, 0);
+    // Add 7 days for padding
+    maxDate.setDate(maxDate.getDate() + 7);
+    return maxDate;
   }, [tasks]);
 
-  const timelineDuration = timelineEnd.getTime() - timelineStart.getTime();
+  // Calculate width using eachDayOfInterval to match TimeAxis exactly
   const dayInMs = 24 * 60 * 60 * 1000;
-  const totalDays = Math.ceil(timelineDuration / dayInMs);
+  const allDays = eachDayOfInterval({ start: timelineStart, end: timelineEnd });
+  const totalDays = allDays.length;
   const totalWidth = totalDays * zoomLevel.cellWidth;
 
   const rowHeight = 40; // Match task tree row height
 
   return (
     <div className="flex flex-col h-full bg-slate-900 overflow-hidden">
-      {/* Time Axis Header */}
-      <div className="flex-shrink-0 sticky top-0 z-10">
-        <TimeAxis
-          startDate={timelineStart}
-          endDate={timelineEnd}
-          zoomLevel={zoomLevel}
-        />
-      </div>
-
-      {/* Timeline Grid + Task Bars */}
+      {/* Timeline Grid + Task Bars with sticky header */}
       <div
         ref={scrollRef}
         className="flex-1 overflow-auto relative"
         onScroll={onScroll}
       >
+        {/* Time Axis Header - Sticky, scrolls horizontally with content */}
+        <div className="sticky top-0 z-20 bg-slate-900">
+          <TimeAxis
+            startDate={timelineStart}
+            endDate={timelineEnd}
+            zoomLevel={zoomLevel}
+          />
+        </div>
+
+        {/* Timeline content */}
         <div
           className="relative"
           style={{
@@ -135,6 +148,35 @@ export function Timeline({ scrollRef, onScroll }: TimelineProps) {
               zoomLevel={zoomLevel}
             />
           ))}
+
+          {/* Today Marker */}
+          {(() => {
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const todayOffset = (today.getTime() - timelineStart.getTime()) / dayInMs;
+            const todayX = todayOffset * zoomLevel.cellWidth;
+
+            // Only show if today is within the timeline range
+            if (todayX >= 0 && todayX <= totalWidth) {
+              return (
+                <>
+                  {/* Vertical line */}
+                  <div
+                    className="absolute top-0 bottom-0 w-0.5 bg-red-500 pointer-events-none z-30"
+                    style={{ left: todayX }}
+                  />
+                  {/* Label at top */}
+                  <div
+                    className="absolute top-0 px-2 py-1 text-xs font-semibold text-white bg-red-500 rounded-b pointer-events-none z-30"
+                    style={{ left: todayX - 20, transform: 'translateX(-50%)' }}
+                  >
+                    Today
+                  </div>
+                </>
+              );
+            }
+            return null;
+          })()}
 
           {/* Ghost Task Bar (during drag) */}
           {state.dragState.isDragging && state.dragState.ghostTask && (() => {
