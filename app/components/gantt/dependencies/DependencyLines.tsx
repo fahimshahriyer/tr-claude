@@ -172,6 +172,11 @@ function DependencyPath({
 
   return (
     <g className="dependency-line">
+      <title>
+        {dependency.type.replace('-', ' to ').toUpperCase()}
+        {dependency.lag ? ` (${dependency.lag}d lag)` : ''}
+      </title>
+
       {/* Shadow for depth */}
       <path
         d={pathData}
@@ -202,12 +207,7 @@ function DependencyPath({
         stroke="transparent"
         strokeWidth="16"
         className="pointer-events-auto cursor-pointer"
-      >
-        <title>
-          {dependency.type.replace('-', ' to ').toUpperCase()}
-          {dependency.lag ? ` (${dependency.lag}d lag)` : ''}
-        </title>
-      </path>
+      />
     </g>
   );
 }
