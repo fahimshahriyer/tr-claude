@@ -34,6 +34,10 @@ type SchedulerAction =
   | { type: 'SET_VIEWPORT'; payload: Partial<ViewportBounds> }
   | { type: 'SET_DRAG_STATE'; payload: Partial<DragState> }
   | { type: 'CLEAR_DRAG_STATE' }
+  | { type: 'START_DEPENDENCY_CREATION'; payload: { eventId: string; port: 'top' | 'bottom' | 'left' | 'right'; x: number; y: number } }
+  | { type: 'UPDATE_DEPENDENCY_CREATION'; payload: { x: number; y: number; toEventId?: string | null; toPort?: 'top' | 'bottom' | 'left' | 'right' | null } }
+  | { type: 'COMPLETE_DEPENDENCY_CREATION' }
+  | { type: 'CANCEL_DEPENDENCY_CREATION' }
   | { type: 'SELECT_EVENT'; payload: string }
   | { type: 'DESELECT_EVENT'; payload: string }
   | { type: 'CLEAR_SELECTION' }
@@ -83,6 +87,15 @@ function createInitialState(config: SchedulerConfig): SchedulerState {
       eventId: null,
       startX: 0,
       startY: 0,
+      currentX: 0,
+      currentY: 0,
+    },
+    dependencyCreation: {
+      isCreating: false,
+      fromEventId: null,
+      fromPort: null,
+      fromX: 0,
+      fromY: 0,
       currentX: 0,
       currentY: 0,
     },
@@ -310,6 +323,98 @@ function schedulerReducer(state: SchedulerState, action: SchedulerAction): Sched
       };
     }
 
+    case 'START_DEPENDENCY_CREATION':
+      return {
+        ...state,
+        dependencyCreation: {
+          isCreating: true,
+          fromEventId: action.payload.eventId,
+          fromPort: action.payload.port,
+          fromX: action.payload.x,
+          fromY: action.payload.y,
+          currentX: action.payload.x,
+          currentY: action.payload.y,
+        },
+      };
+
+    case 'UPDATE_DEPENDENCY_CREATION':
+      return {
+        ...state,
+        dependencyCreation: {
+          ...state.dependencyCreation,
+          currentX: action.payload.x,
+          currentY: action.payload.y,
+          toEventId: action.payload.toEventId,
+          toPort: action.payload.toPort,
+        },
+      };
+
+    case 'COMPLETE_DEPENDENCY_CREATION': {
+      const { fromEventId, toEventId, fromPort, toPort } = state.dependencyCreation;
+
+      // Only create dependency if we have both from and to events
+      if (fromEventId && toEventId && fromEventId !== toEventId) {
+        // Check if dependency already exists
+        const existingDep = state.dependencies.find(
+          d => d.fromEventId === fromEventId && d.toEventId === toEventId
+        );
+
+        if (!existingDep) {
+          // Create new dependency with port information
+          const newDependency: Dependency = {
+            id: `dep-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+            fromEventId,
+            toEventId,
+            type: 'finish-to-start',
+            fromPort: fromPort || undefined,
+            toPort: toPort || undefined,
+          };
+
+          return {
+            ...state,
+            dependencies: [...state.dependencies, newDependency],
+            dependencyCreation: {
+              isCreating: false,
+              fromEventId: null,
+              fromPort: null,
+              fromX: 0,
+              fromY: 0,
+              currentX: 0,
+              currentY: 0,
+            },
+          };
+        }
+      }
+
+      // Reset dependency creation state
+      return {
+        ...state,
+        dependencyCreation: {
+          isCreating: false,
+          fromEventId: null,
+          fromPort: null,
+          fromX: 0,
+          fromY: 0,
+          currentX: 0,
+          currentY: 0,
+        },
+      };
+    }
+
+    case 'CANCEL_DEPENDENCY_CREATION':
+      return {
+        ...state,
+        dependencyCreation: {
+          isCreating: false,
+          fromEventId: null,
+          fromPort: null,
+          fromX: 0,
+          fromY: 0,
+          currentX: 0,
+          currentY: 0,
+        },
+      };
+
     default:
       return state;
   }
@@ -320,6 +425,7 @@ interface SchedulerContextValue {
   state: SchedulerState;
   config: SchedulerConfig;
   dispatch: React.Dispatch<SchedulerAction>;
+  scrollContainerRef: React.RefObject<HTMLDivElement>;
   // Convenience methods
   addEvent: (event: SchedulerEvent) => void;
   updateEvent: (id: string, updates: Partial<SchedulerEvent>) => void;
@@ -336,6 +442,8 @@ interface SchedulerContextValue {
   zoomOut: () => void;
   navigateToToday: () => void;
   navigateToDate: (date: Date) => void;
+  scrollToDate: (date: Date) => void;
+  scrollToPosition: (scrollLeft: number, scrollTop?: number) => void;
 }
 
 const SchedulerContext = createContext<SchedulerContextValue | null>(null);
@@ -381,6 +489,7 @@ export function SchedulerProvider({
 }: SchedulerProviderProps) {
   const config = { ...defaultConfig, ...configProp };
   const [state, dispatch] = useReducer(schedulerReducer, createInitialState(config));
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   // Initialize with provided data
   useEffect(() => {
@@ -441,25 +550,123 @@ export function SchedulerProvider({
   }, []);
 
   const zoomIn = useCallback(() => {
-    dispatch({ type: 'ZOOM_IN' });
-  }, []);
+    // Store current viewport center before zoom
+    if (scrollContainerRef.current) {
+      const container = scrollContainerRef.current;
+      const containerWidth = container.clientWidth;
+      const centerScrollLeft = container.scrollLeft + containerWidth / 2;
+
+      // Calculate what time is at the center using current zoom level
+      const { timeAxis, zoomLevel } = state;
+      const centerTime = timeAxis.startDate.getTime() +
+        (centerScrollLeft / timeAxis.cellWidth) * zoomLevel.tickSize;
+
+      // Calculate the next zoom level
+      const currentLevelIndex = ZOOM_LEVELS.findIndex((z) => z.level === zoomLevel.level);
+      const nextLevelIndex = Math.min(ZOOM_LEVELS.length - 1, currentLevelIndex + 1);
+      const nextZoomLevel = ZOOM_LEVELS[nextLevelIndex];
+
+      // Perform zoom
+      dispatch({ type: 'ZOOM_IN' });
+
+      // After zoom, adjust scroll to keep the same time at center
+      requestAnimationFrame(() => {
+        // Calculate new pixel position with the new zoom level
+        const newCenterPixel =
+          ((centerTime - timeAxis.startDate.getTime()) / nextZoomLevel.tickSize) *
+          nextZoomLevel.cellWidth;
+        const newScrollLeft = Math.max(0, newCenterPixel - containerWidth / 2);
+        container.scrollLeft = newScrollLeft;
+      });
+    } else {
+      dispatch({ type: 'ZOOM_IN' });
+    }
+  }, [state, scrollContainerRef]);
 
   const zoomOut = useCallback(() => {
-    dispatch({ type: 'ZOOM_OUT' });
+    // Store current viewport center before zoom
+    if (scrollContainerRef.current) {
+      const container = scrollContainerRef.current;
+      const containerWidth = container.clientWidth;
+      const centerScrollLeft = container.scrollLeft + containerWidth / 2;
+
+      // Calculate what time is at the center using current zoom level
+      const { timeAxis, zoomLevel } = state;
+      const centerTime = timeAxis.startDate.getTime() +
+        (centerScrollLeft / timeAxis.cellWidth) * zoomLevel.tickSize;
+
+      // Calculate the previous zoom level
+      const currentLevelIndex = ZOOM_LEVELS.findIndex((z) => z.level === zoomLevel.level);
+      const prevLevelIndex = Math.max(0, currentLevelIndex - 1);
+      const prevZoomLevel = ZOOM_LEVELS[prevLevelIndex];
+
+      // Perform zoom
+      dispatch({ type: 'ZOOM_OUT' });
+
+      // After zoom, adjust scroll to keep the same time at center
+      requestAnimationFrame(() => {
+        // Calculate new pixel position with the new zoom level
+        const newCenterPixel =
+          ((centerTime - timeAxis.startDate.getTime()) / prevZoomLevel.tickSize) *
+          prevZoomLevel.cellWidth;
+        const newScrollLeft = Math.max(0, newCenterPixel - containerWidth / 2);
+        container.scrollLeft = newScrollLeft;
+      });
+    } else {
+      dispatch({ type: 'ZOOM_OUT' });
+    }
+  }, [state, scrollContainerRef]);
+
+  const scrollToDate = useCallback((date: Date) => {
+    if (!scrollContainerRef.current) return;
+
+    const { timeAxis, zoomLevel } = state;
+    const dateTime = date.getTime();
+    const startTime = timeAxis.startDate.getTime();
+
+    // Calculate pixel position of the date
+    const pixelPosition = ((dateTime - startTime) / zoomLevel.tickSize) * timeAxis.cellWidth;
+
+    // Scroll to center the date in the viewport
+    const containerWidth = scrollContainerRef.current.clientWidth;
+    const scrollLeft = Math.max(0, pixelPosition - containerWidth / 2);
+
+    scrollContainerRef.current.scrollTo({
+      left: scrollLeft,
+      behavior: 'smooth',
+    });
+  }, [state]);
+
+  const scrollToPosition = useCallback((scrollLeft: number, scrollTop?: number) => {
+    if (!scrollContainerRef.current) return;
+
+    scrollContainerRef.current.scrollTo({
+      left: scrollLeft,
+      top: scrollTop ?? scrollContainerRef.current.scrollTop,
+      behavior: 'smooth',
+    });
   }, []);
 
   const navigateToToday = useCallback(() => {
-    dispatch({ type: 'NAVIGATE_TO_TODAY' });
-  }, []);
+    // Just scroll to today's position without changing the time range
+    // This preserves the current zoom level and time range
+    const today = new Date();
+    scrollToDate(today);
+  }, [scrollToDate]);
 
   const navigateToDate = useCallback((date: Date) => {
     dispatch({ type: 'NAVIGATE_TO_DATE', payload: date });
-  }, []);
+    // Scroll to the date's position after a short delay
+    setTimeout(() => {
+      scrollToDate(date);
+    }, 0);
+  }, [scrollToDate]);
 
   const value: SchedulerContextValue = {
     state,
     config,
     dispatch,
+    scrollContainerRef,
     addEvent,
     updateEvent,
     deleteEvent,
@@ -475,6 +682,8 @@ export function SchedulerProvider({
     zoomOut,
     navigateToToday,
     navigateToDate,
+    scrollToDate,
+    scrollToPosition,
   };
 
   return <SchedulerContext.Provider value={value}>{children}</SchedulerContext.Provider>;

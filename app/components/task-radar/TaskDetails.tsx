@@ -38,7 +38,7 @@ export function TaskDetails() {
 
   return (
     <div className="absolute top-4 right-20 z-50 w-80">
-      <div className="bg-gray-900/95 backdrop-blur-sm border border-emerald-500/50 rounded-lg shadow-2xl shadow-emerald-500/10">
+      <div className="bg-gray-900/95 backdrop-blur-sm border border-zinc-500/50 rounded-lg shadow-2xl shadow-zinc-500/10">
         {/* Header */}
         <div className="flex items-start justify-between p-4 border-b border-gray-800">
           <div className="flex items-start gap-3 flex-1">
@@ -105,7 +105,7 @@ export function TaskDetails() {
           {selectedTask.status && (
             <div className="space-y-2">
               <span className="text-sm text-gray-400">Status</span>
-              <span className="inline-block px-3 py-1 rounded-full text-xs font-medium bg-gray-800 text-emerald-400 capitalize">
+              <span className="inline-block px-3 py-1 rounded-full text-xs font-medium bg-gray-800 text-zinc-400 capitalize">
                 {selectedTask.status}
               </span>
             </div>

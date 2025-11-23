@@ -1,5 +1,13 @@
 export type Priority = "low" | "medium" | "high";
 export type TaskStatus = "todo" | "in-progress" | "done";
+export type ConnectionPort = "top" | "right" | "bottom" | "left";
+
+export interface TaskConnection {
+  fromTaskId: string;
+  fromPort: ConnectionPort;
+  toTaskId: string;
+  toPort: ConnectionPort;
+}
 
 export interface Task {
   id: string;
@@ -12,7 +20,8 @@ export interface Task {
   tags?: string[];
   assignee?: string;
   estimatedHours?: number;
-  dependencies?: string[]; // IDs of tasks this task depends on
+  dependencies?: string[]; // IDs of tasks this task depends on (legacy support)
+  connections?: TaskConnection[]; // New port-based connections
   completedAt?: Date;
   subtasks?: { id: string; title: string; completed: boolean }[];
   category?: string;
@@ -38,6 +47,9 @@ export interface RadarState {
   showDependencies: boolean;
   isConnectingDependency: boolean;
   connectingFromTaskId: string | null;
+  connectingFromPort: ConnectionPort | null;
+  connectingMouseX: number;
+  connectingMouseY: number;
   filterQuery: string;
   filterPriority: Priority | "all";
   filterStatus: TaskStatus | "all";
@@ -67,22 +79,74 @@ export const CONSTANTS = {
   MAX_ZOOM: 2.0,
   ZOOM_STEP: 0.1,
   RADIAL_LINES: 12,
-  RING_LABEL_INTERVALS: [1, 7, 14, 30, 60, 90], // days
-  TASK_BLIP_WIDTH: 200,
-  TASK_BLIP_HEIGHT: 80,
+  RING_LABEL_INTERVALS: [1, 3, 5, 7, 14, 21, 30, 60, 90], // days - added 3, 5, 21 for better granularity
+  TASK_BLIP_WIDTH: 160,
+  TASK_BLIP_HEIGHT: 70,
   CENTER_RADIUS: 40,
   TIME_UPDATE_INTERVAL: 1000, // ms
+  CONNECTION_PORT_SIZE: 10, // px diameter of connection ports
 } as const;
 
 export const PRIORITY_COLORS = {
-  low: "#22c55e", // green
-  medium: "#eab308", // yellow
-  high: "#ef4444", // red
+  low: "#a1a1aa", // zinc-400 - light grey
+  medium: "#71717a", // zinc-500 - medium grey
+  high: "#52525b", // zinc-600 - dark grey
 } as const;
 
 export const TIME_COLORS = {
-  overdue: "#ef4444", // red
-  urgent: "#f97316", // orange (<1 day)
-  soon: "#eab308", // yellow (<7 days)
-  later: "#22c55e", // green (>7 days)
+  overdue: "#3f3f46", // zinc-700 - very dark grey
+  urgent: "#52525b", // zinc-600 - dark grey (<1 day)
+  soon: "#71717a", // zinc-500 - medium grey (<7 days)
+  later: "#a1a1aa", // zinc-400 - light grey (>7 days)
 } as const;
+
+// ============================================
+// TaskRadar Component Props & Options
+// ============================================
+
+export interface TaskRadarOptions {
+  /** Theme mode */
+  theme?: "dark" | "light";
+  /** Show dependencies by default */
+  showDependencies?: boolean;
+  /** Enable filters panel */
+  enableFilters?: boolean;
+  /** Enable time travel feature */
+  enableTimeTravel?: boolean;
+  /** Enable export/import */
+  enableDataManagement?: boolean;
+  /** Show sidebar */
+  showSidebar?: boolean;
+  /** Initial zoom level (0.3 - 2.0) */
+  initialZoom?: number;
+  /** Lock center by default */
+  centerLocked?: boolean;
+}
+
+export interface TaskRadarCallbacks {
+  /** Called when a task is created */
+  onTaskCreate?: (task: Omit<Task, "id" | "createdAt">) => void;
+  /** Called when a task is updated */
+  onTaskUpdate?: (taskId: string, updates: Partial<Task>) => void;
+  /** Called when a task is deleted */
+  onTaskDelete?: (taskId: string) => void;
+  /** Called when tasks are imported */
+  onTasksImport?: (tasks: Task[]) => void;
+  /** Called when all tasks are cleared */
+  onTasksClear?: () => void;
+  /** Called when a connection is created */
+  onConnectionCreate?: (connection: TaskConnection) => void;
+  /** Called when a connection is removed */
+  onConnectionRemove?: (connection: TaskConnection) => void;
+}
+
+export interface TaskRadarProps {
+  /** Array of tasks to display */
+  tasks: Task[];
+  /** Configuration options */
+  options?: TaskRadarOptions;
+  /** Event callbacks */
+  callbacks?: TaskRadarCallbacks;
+  /** Custom class name for container */
+  className?: string;
+}

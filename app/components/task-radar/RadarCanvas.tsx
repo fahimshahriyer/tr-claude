@@ -3,7 +3,7 @@
 import React from "react";
 import { useTaskRadar } from "./TaskRadarContext";
 import { CONSTANTS } from "./types";
-import { generateRingLabels } from "./utils";
+import { generateRingLabels, daysUntilCalendarDay } from "./utils";
 
 export function RadarCanvas() {
   const { viewport, zoom, panOffset, currentTime } = useTaskRadar();
@@ -16,10 +16,14 @@ export function RadarCanvas() {
   // Calculate maximum radius based on viewport
   const maxRadius = Math.max(viewport.width, viewport.height) * 1.5;
 
-  // Generate ring labels
-  const ringLabels = generateRingLabels(maxRadius, zoom);
+  // Generate ring labels (date-based)
+  const ringLabels = generateRingLabels(maxRadius, zoom, currentTime);
+
+  // Extract which days ahead have labels for emphasizing those rings
+  const labeledDaysAhead = new Set(ringLabels.map(({ daysAhead }) => daysAhead));
 
   // Generate rings (more than labels for visual continuity)
+  // Using date-based positioning: each ring represents a calendar day boundary
   const maxDays = Math.ceil(maxRadius / (CONSTANTS.BASE_RING_SPACING * zoom));
   const rings = Array.from({ length: maxDays }, (_, i) => i + 1);
 
@@ -60,9 +64,9 @@ export function RadarCanvas() {
 
         {/* Center point gradient */}
         <radialGradient id="center-gradient" cx="50%" cy="50%">
-          <stop offset="0%" stopColor="#10b981" stopOpacity="0.8" />
-          <stop offset="50%" stopColor="#059669" stopOpacity="0.4" />
-          <stop offset="100%" stopColor="#047857" stopOpacity="0" />
+          <stop offset="0%" stopColor="#a1a1aa" stopOpacity="0.8" />
+          <stop offset="50%" stopColor="#71717a" stopOpacity="0.4" />
+          <stop offset="100%" stopColor="#52525b" stopOpacity="0" />
         </radialGradient>
 
         {/* Glow filter for center */}
@@ -93,7 +97,7 @@ export function RadarCanvas() {
               y1={viewport.centerY}
               x2={x2}
               y2={y2}
-              stroke="rgba(16, 185, 129, 0.15)"
+              stroke="rgba(113, 113, 122, 0.15)"
               strokeWidth="1"
               strokeDasharray="4 4"
             />
@@ -103,23 +107,25 @@ export function RadarCanvas() {
 
       {/* Concentric rings */}
       <g>
-        {rings.map((day) => {
-          const radius = day * CONSTANTS.BASE_RING_SPACING * zoom;
+        {rings.map((daysAhead) => {
+          // Calculate fractional days until this calendar day boundary
+          const fractionalDays = daysUntilCalendarDay(currentTime, daysAhead);
+          const radius = fractionalDays * CONSTANTS.BASE_RING_SPACING * zoom;
           if (radius > maxRadius) return null;
 
-          // Emphasize labeled rings
-          const isLabeled = CONSTANTS.RING_LABEL_INTERVALS.includes(day);
+          // Emphasize rings that have labels (adaptive based on zoom)
+          const isLabeled = labeledDaysAhead.has(daysAhead);
           const strokeWidth = isLabeled ? 1.5 : 0.5;
           const strokeOpacity = isLabeled ? 0.4 : 0.2;
 
           return (
             <circle
-              key={`ring-${day}`}
+              key={`ring-${daysAhead}`}
               cx={viewport.centerX}
               cy={viewport.centerY}
               r={radius}
               fill="none"
-              stroke="#10b981"
+              stroke="#71717a"
               strokeWidth={strokeWidth}
               strokeOpacity={strokeOpacity}
             />
@@ -134,7 +140,7 @@ export function RadarCanvas() {
             key={`label-${label}`}
             x={viewport.centerX}
             y={viewport.centerY - distance}
-            fill="#10b981"
+            fill="#a1a1aa"
             fillOpacity="0.7"
             fontSize="12"
             fontWeight="500"
@@ -164,7 +170,7 @@ export function RadarCanvas() {
           cy={viewport.centerY}
           r={CONSTANTS.CENTER_RADIUS}
           fill="none"
-          stroke="#10b981"
+          stroke="#71717a"
           strokeWidth="2"
           opacity="0.6"
           filter="url(#glow)"
@@ -175,7 +181,7 @@ export function RadarCanvas() {
           cx={viewport.centerX}
           cy={viewport.centerY}
           r={CONSTANTS.CENTER_RADIUS * 0.6}
-          fill="#10b981"
+          fill="#a1a1aa"
           opacity="0.8"
           filter="url(#glow)"
         />
@@ -186,7 +192,7 @@ export function RadarCanvas() {
           cy={viewport.centerY}
           r={CONSTANTS.CENTER_RADIUS * 0.8}
           fill="none"
-          stroke="#10b981"
+          stroke="#71717a"
           strokeWidth="1"
           opacity="0.5"
         >
@@ -204,7 +210,7 @@ export function RadarCanvas() {
         <text
           x={viewport.centerX}
           y={viewport.centerY - CONSTANTS.CENTER_RADIUS - 15}
-          fill="#10b981"
+          fill="#d4d4d8"
           fillOpacity="0.9"
           fontSize="14"
           fontWeight="600"
@@ -218,7 +224,7 @@ export function RadarCanvas() {
         <text
           x={viewport.centerX}
           y={viewport.centerY + CONSTANTS.CENTER_RADIUS + 25}
-          fill="#10b981"
+          fill="#d4d4d8"
           fillOpacity="0.9"
           fontSize="16"
           fontWeight="700"

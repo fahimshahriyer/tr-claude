@@ -2,6 +2,7 @@
 
 import React from "react";
 import { useTaskRadar } from "./TaskRadarContext";
+import { CONSTANTS, ConnectionPort } from "./types";
 
 export function DependencyConnections() {
   const {
@@ -12,13 +13,39 @@ export function DependencyConnections() {
     panOffset,
     isConnectingDependency,
     connectingFromTaskId,
+    connectingFromPort,
+    connectingMouseX,
+    connectingMouseY,
     selectedTaskId,
   } = useTaskRadar();
 
   if (!showDependencies && !isConnectingDependency) return null;
   if (viewport.width === 0 || viewport.height === 0) return null;
 
-  // Generate all dependency connections
+  // Helper to get port position
+  const getPortPosition = (
+    taskId: string,
+    port: ConnectionPort
+  ): { x: number; y: number } | null => {
+    const taskPos = taskPositions.get(taskId);
+    if (!taskPos) return null;
+
+    const halfWidth = CONSTANTS.TASK_BLIP_WIDTH / 2;
+    const halfHeight = CONSTANTS.TASK_BLIP_HEIGHT / 2;
+
+    switch (port) {
+      case "top":
+        return { x: taskPos.x, y: taskPos.y - halfHeight };
+      case "right":
+        return { x: taskPos.x + halfWidth, y: taskPos.y };
+      case "bottom":
+        return { x: taskPos.x, y: taskPos.y + halfHeight };
+      case "left":
+        return { x: taskPos.x - halfWidth, y: taskPos.y };
+    }
+  };
+
+  // Generate all port-based connections
   const connections: Array<{
     fromId: string;
     toId: string;
@@ -26,78 +53,92 @@ export function DependencyConnections() {
     fromY: number;
     toX: number;
     toY: number;
+    fromPort: ConnectionPort;
+    toPort: ConnectionPort;
     isActive: boolean;
   }> = [];
 
   tasks.forEach((task) => {
-    if (task.dependencies && task.dependencies.length > 0) {
-      const toPos = taskPositions.get(task.id);
-      if (!toPos) return;
+    if (task.connections && task.connections.length > 0) {
+      task.connections.forEach((conn) => {
+        const fromPos = getPortPosition(conn.fromTaskId, conn.fromPort);
+        const toPos = getPortPosition(conn.toTaskId, conn.toPort);
 
-      task.dependencies.forEach((depId) => {
-        const fromPos = taskPositions.get(depId);
-        if (!fromPos) return;
+        if (!fromPos || !toPos) return;
 
-        const isActive = selectedTaskId === task.id || selectedTaskId === depId;
+        const isActive = selectedTaskId === task.id || selectedTaskId === conn.fromTaskId;
 
         connections.push({
-          fromId: depId,
-          toId: task.id,
+          fromId: conn.fromTaskId,
+          toId: conn.toTaskId,
           fromX: fromPos.x,
           fromY: fromPos.y,
           toX: toPos.x,
           toY: toPos.y,
+          fromPort: conn.fromPort,
+          toPort: conn.toPort,
           isActive,
         });
       });
     }
   });
 
-  // Helper to create curved path
+  // Helper to create curved path from port to port
   const createCurvePath = (
     x1: number,
     y1: number,
     x2: number,
-    y2: number
+    y2: number,
+    fromPort: ConnectionPort,
+    toPort: ConnectionPort
   ): string => {
-    // Calculate control points for smooth bezier curve
+    // Calculate control points based on port directions
     const dx = x2 - x1;
     const dy = y2 - y1;
     const distance = Math.sqrt(dx * dx + dy * dy);
 
-    // Control point offset (creates the curve)
-    const controlDistance = distance * 0.3;
+    // Control point distance from ports
+    const controlDist = Math.min(distance * 0.4, 150);
 
-    // Calculate perpendicular direction for control points
-    const midX = (x1 + x2) / 2;
-    const midY = (y1 + y2) / 2;
+    // Calculate control points based on port orientation
+    let cp1x = x1;
+    let cp1y = y1;
+    let cp2x = x2;
+    let cp2y = y2;
 
-    // Angle of the line
-    const angle = Math.atan2(dy, dx);
-    const perpAngle = angle + Math.PI / 2;
+    // First control point (from port direction)
+    switch (fromPort) {
+      case "top":
+        cp1y = y1 - controlDist;
+        break;
+      case "right":
+        cp1x = x1 + controlDist;
+        break;
+      case "bottom":
+        cp1y = y1 + controlDist;
+        break;
+      case "left":
+        cp1x = x1 - controlDist;
+        break;
+    }
 
-    // Control points
-    const cp1x = x1 + Math.cos(angle) * controlDistance;
-    const cp1y = y1 + Math.sin(angle) * controlDistance;
-    const cp2x = x2 - Math.cos(angle) * controlDistance;
-    const cp2y = y2 - Math.sin(angle) * controlDistance;
+    // Second control point (to port direction)
+    switch (toPort) {
+      case "top":
+        cp2y = y2 - controlDist;
+        break;
+      case "right":
+        cp2x = x2 + controlDist;
+        break;
+      case "bottom":
+        cp2y = y2 + controlDist;
+        break;
+      case "left":
+        cp2x = x2 - controlDist;
+        break;
+    }
 
     return `M ${x1} ${y1} C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${x2} ${y2}`;
-  };
-
-  // Create arrowhead marker path
-  const createArrowhead = (
-    x1: number,
-    y1: number,
-    x2: number,
-    y2: number
-  ): { x: number; y: number; angle: number } => {
-    const angle = Math.atan2(y2 - y1, x2 - x1);
-    return {
-      x: x2,
-      y: y2,
-      angle: (angle * 180) / Math.PI,
-    };
   };
 
   return (
@@ -121,7 +162,7 @@ export function DependencyConnections() {
           orient="auto"
           markerUnits="strokeWidth"
         >
-          <path d="M0,0 L0,6 L9,3 z" fill="#10b981" />
+          <path d="M0,0 L0,6 L9,3 z" fill="#a1a1aa" />
         </marker>
 
         {/* Arrow marker for normal connections */}
@@ -147,88 +188,122 @@ export function DependencyConnections() {
         </filter>
       </defs>
 
-      {/* Draw all dependency connections */}
+      {/* Draw all port-based connections */}
       <g>
-        {connections.map(({ fromId, toId, fromX, fromY, toX, toY, isActive }) => {
-          const path = createCurvePath(fromX, fromY, toX, toY);
-          const arrow = createArrowhead(fromX, fromY, toX, toY);
+        {connections.map(
+          ({ fromId, toId, fromX, fromY, toX, toY, fromPort, toPort, isActive }) => {
+            const path = createCurvePath(fromX, fromY, toX, toY, fromPort, toPort);
 
-          return (
-            <g key={`${fromId}-${toId}`}>
-              {/* Background glow for active connections */}
-              {isActive && (
+            return (
+              <g key={`${fromId}-${fromPort}-${toId}-${toPort}`}>
+                {/* Background glow for active connections */}
+                {isActive && (
+                  <path
+                    d={path}
+                    fill="none"
+                    stroke="#a1a1aa"
+                    strokeWidth="4"
+                    opacity="0.3"
+                    filter="url(#connection-glow)"
+                  />
+                )}
+
+                {/* Main connection line */}
                 <path
                   d={path}
                   fill="none"
-                  stroke="#10b981"
-                  strokeWidth="4"
-                  opacity="0.3"
-                  filter="url(#connection-glow)"
+                  stroke={isActive ? "#a1a1aa" : "#6b7280"}
+                  strokeWidth={isActive ? "2.5" : "1.5"}
+                  strokeDasharray={isActive ? "0" : "5 5"}
+                  opacity={isActive ? "0.9" : "0.4"}
+                  markerEnd={isActive ? "url(#arrowhead-active)" : "url(#arrowhead-normal)"}
+                  className="transition-all duration-300"
                 />
-              )}
 
-              {/* Main connection line */}
-              <path
-                d={path}
-                fill="none"
-                stroke={isActive ? "#10b981" : "#6b7280"}
-                strokeWidth={isActive ? "2.5" : "1.5"}
-                strokeDasharray={isActive ? "0" : "5 5"}
-                opacity={isActive ? "0.9" : "0.4"}
-                markerEnd={isActive ? "url(#arrowhead-active)" : "url(#arrowhead-normal)"}
-                className="transition-all duration-300"
-              />
-
-              {/* Connection label (optional - shows on hover) */}
-              {isActive && (
-                <g>
-                  <circle
-                    cx={(fromX + toX) / 2}
-                    cy={(fromY + toY) / 2}
-                    r="12"
-                    fill="#1f2937"
-                    stroke="#10b981"
-                    strokeWidth="1.5"
-                  />
-                  <text
-                    x={(fromX + toX) / 2}
-                    y={(fromY + toY) / 2}
-                    fill="#10b981"
-                    fontSize="10"
-                    fontWeight="600"
-                    textAnchor="middle"
-                    dominantBaseline="middle"
-                  >
-                    →
-                  </text>
-                </g>
-              )}
-            </g>
-          );
-        })}
+                {/* Connection label (optional - shows on hover) */}
+                {isActive && (
+                  <g>
+                    <circle
+                      cx={(fromX + toX) / 2}
+                      cy={(fromY + toY) / 2}
+                      r="12"
+                      fill="#1f2937"
+                      stroke="#a1a1aa"
+                      strokeWidth="1.5"
+                    />
+                    <text
+                      x={(fromX + toX) / 2}
+                      y={(fromY + toY) / 2}
+                      fill="#a1a1aa"
+                      fontSize="10"
+                      fontWeight="600"
+                      textAnchor="middle"
+                      dominantBaseline="middle"
+                    >
+                      →
+                    </text>
+                  </g>
+                )}
+              </g>
+            );
+          }
+        )}
       </g>
 
       {/* Show connecting line when in dependency connection mode */}
-      {isConnectingDependency && connectingFromTaskId && (
+      {isConnectingDependency && connectingFromTaskId && connectingFromPort && (
         <g className="pointer-events-none">
-          <path
-            d={`M ${taskPositions.get(connectingFromTaskId)?.x || 0} ${
-              taskPositions.get(connectingFromTaskId)?.y || 0
-            } L ${viewport.centerX} ${viewport.centerY}`}
-            fill="none"
-            stroke="#10b981"
-            strokeWidth="2"
-            strokeDasharray="5 5"
-            opacity="0.6"
-          >
-            <animate
-              attributeName="stroke-dashoffset"
-              from="0"
-              to="10"
-              dur="0.5s"
-              repeatCount="indefinite"
-            />
-          </path>
+          {(() => {
+            const fromPos = getPortPosition(connectingFromTaskId, connectingFromPort);
+            if (!fromPos) return null;
+
+            // Calculate control point for bezier curve based on from port direction
+            const dx = connectingMouseX - fromPos.x;
+            const dy = connectingMouseY - fromPos.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            const controlDist = Math.min(distance * 0.4, 150);
+
+            let cp1x = fromPos.x;
+            let cp1y = fromPos.y;
+
+            // First control point (from port direction)
+            switch (connectingFromPort) {
+              case "top":
+                cp1y = fromPos.y - controlDist;
+                break;
+              case "right":
+                cp1x = fromPos.x + controlDist;
+                break;
+              case "bottom":
+                cp1y = fromPos.y + controlDist;
+                break;
+              case "left":
+                cp1x = fromPos.x - controlDist;
+                break;
+            }
+
+            // Create a smooth curve toward the mouse
+            const curvePath = `M ${fromPos.x} ${fromPos.y} Q ${cp1x} ${cp1y}, ${connectingMouseX} ${connectingMouseY}`;
+
+            return (
+              <path
+                d={curvePath}
+                stroke="#a1a1aa"
+                strokeWidth="2"
+                fill="none"
+                strokeDasharray="5 5"
+                opacity="0.6"
+              >
+                <animate
+                  attributeName="stroke-dashoffset"
+                  from="0"
+                  to="10"
+                  dur="0.5s"
+                  repeatCount="indefinite"
+                />
+              </path>
+            );
+          })()}
         </g>
       )}
     </svg>

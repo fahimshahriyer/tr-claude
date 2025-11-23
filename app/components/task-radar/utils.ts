@@ -14,10 +14,26 @@ export function hashString(str: string): number {
 }
 
 /**
- * Calculate days between two dates
+ * Calculate days between two dates (date-based, not time-based)
+ * Returns fractional days until the target date boundary (midnight)
  */
 export function daysBetween(date1: Date, date2: Date): number {
-  const diff = date2.getTime() - date1.getTime();
+  // If date2 is before date1, it's overdue
+  if (date2 < date1) {
+    const diff = date1.getTime() - date2.getTime();
+    return -(diff / (1000 * 60 * 60 * 24));
+  }
+
+  // Calculate time until the start of date2's day (midnight)
+  const targetMidnight = new Date(date2);
+  targetMidnight.setHours(0, 0, 0, 0);
+
+  // If date2 already has time component, we're measuring to that specific time
+  // Otherwise, measure to the start of that day
+  const hasTimeComponent = date2.getHours() !== 0 || date2.getMinutes() !== 0 || date2.getSeconds() !== 0;
+  const targetDate = hasTimeComponent ? date2 : targetMidnight;
+
+  const diff = targetDate.getTime() - date1.getTime();
   return diff / (1000 * 60 * 60 * 24);
 }
 
@@ -54,6 +70,31 @@ export function cartesianToPolar(
 }
 
 /**
+ * Calculate fractional days until a calendar day boundary (N days from now)
+ * For date-based temporal system where rings represent calendar day boundaries
+ * The ring represents the END of that day (midnight after that day)
+ */
+export function daysUntilCalendarDay(currentTime: Date, daysAhead: number): number {
+  // Get midnight AFTER the target day (end of that day)
+  const targetDate = new Date(currentTime);
+  targetDate.setDate(targetDate.getDate() + daysAhead + 1);
+  targetDate.setHours(0, 0, 0, 0);
+
+  // Calculate fractional days until that midnight
+  const diff = targetDate.getTime() - currentTime.getTime();
+  return diff / (1000 * 60 * 60 * 24);
+}
+
+/**
+ * Calculate which date and time a distance represents
+ */
+export function dateFromDistance(currentTime: Date, fractionalDays: number): Date {
+  // Add the fractional days to current time to get the exact time
+  const targetTime = new Date(currentTime.getTime() + fractionalDays * 24 * 60 * 60 * 1000);
+  return targetTime;
+}
+
+/**
  * Calculate task position based on due date with better angle distribution
  */
 export function calculateTaskPosition(
@@ -87,28 +128,34 @@ export function calculateTaskPosition(
   if (existingPosition?.isUserPositioned) {
     // Maintain user's chosen angle
     angle = existingPosition.relativeAngle;
+  } else if (existingPosition?.relativeAngle !== undefined) {
+    // Keep existing angle for tasks that have been positioned
+    angle = existingPosition.relativeAngle;
   } else if (allTasks) {
-    // Better distribution: group tasks by similar due dates and spread them evenly
-    const tasksAtSimilarDistance = allTasks.filter(t => {
-      const tDays = daysBetween(currentTime, t.dueDate);
-      return Math.abs(tDays - daysRemaining) < 0.5; // Within 12 hours
-    });
+    // Sort all tasks by ID for consistent ordering
+    const sortedTasks = [...allTasks].sort((a, b) => a.id.localeCompare(b.id));
+    const taskIndex = sortedTasks.findIndex(t => t.id === task.id);
+    const totalTasks = sortedTasks.length;
 
-    const taskIndex = tasksAtSimilarDistance.findIndex(t => t.id === task.id);
-    const totalAtDistance = tasksAtSimilarDistance.length;
+    // Use golden angle for optimal distribution (prevents clustering)
+    // Golden angle ≈ 137.5° creates a spiral pattern that looks natural
+    const goldenAngle = Math.PI * (3 - Math.sqrt(5)); // ≈ 2.399 radians
 
-    if (totalAtDistance > 1) {
-      // Distribute evenly around the circle
-      angle = (taskIndex / totalAtDistance) * 2 * Math.PI;
-    } else {
-      // Use deterministic hash of task ID
-      const hash = hashString(task.id);
-      angle = (hash % 360) * (Math.PI / 180);
-    }
+    // Base angle uses golden angle spiral
+    let baseAngle = (taskIndex * goldenAngle) % (2 * Math.PI);
+
+    // Add variation based on priority to further spread tasks
+    const priorityOffset = task.priority === "high" ? 0 : task.priority === "medium" ? 0.5 : 1.0;
+
+    // Add small deterministic offset based on task properties
+    const hash = hashString(task.id + (task.title || ""));
+    const hashOffset = ((hash % 100) / 100) * 0.3; // Small variation (0-0.3 radians)
+
+    angle = baseAngle + priorityOffset + hashOffset;
   } else {
-    // Fallback: Use deterministic hash of task ID
-    const hash = hashString(task.id);
-    angle = (hash % 360) * (Math.PI / 180);
+    // Fallback: Use improved hash with better distribution
+    const hash = hashString(task.id + (task.title || "") + (task.priority || ""));
+    angle = (hash / 1000000) * 2 * Math.PI;
   }
 
   const { x, y } = polarToCartesian(centerX, centerY, scaledDistance, angle);
@@ -222,24 +269,51 @@ export function formatDetailedTimeRemaining(daysRemaining: number): string {
 }
 
 /**
- * Generate ring labels based on viewport and zoom
+ * Generate ring labels based on viewport and zoom (adaptive like Google Maps)
+ * Uses date-based positioning where rings represent calendar day boundaries
  */
-export function generateRingLabels(maxRadius: number, zoom: number): Array<{ distance: number; label: string }> {
-  const labels: Array<{ distance: number; label: string }> = [];
+export function generateRingLabels(
+  maxRadius: number,
+  zoom: number,
+  currentTime: Date
+): Array<{ distance: number; label: string; daysAhead: number }> {
+  const labels: Array<{ distance: number; label: string; daysAhead: number }> = [];
 
-  for (const days of CONSTANTS.RING_LABEL_INTERVALS) {
-    const distance = days * CONSTANTS.BASE_RING_SPACING * zoom;
+  // Adaptive intervals based on zoom level (like Google Maps)
+  let intervals: number[];
+  if (zoom < 0.6) {
+    // Zoomed out - show major intervals only
+    intervals = [7, 14, 30, 60, 90];
+  } else if (zoom < 1.2) {
+    // Medium zoom - show more detail
+    intervals = [1, 3, 7, 14, 21, 30, 60, 90];
+  } else {
+    // Zoomed in - show fine detail
+    intervals = [1, 2, 3, 5, 7, 10, 14, 21, 30, 45, 60, 90];
+  }
+
+  for (const daysAhead of intervals) {
+    // Calculate fractional days until this calendar day boundary
+    const fractionalDays = daysUntilCalendarDay(currentTime, daysAhead);
+    const distance = fractionalDays * CONSTANTS.BASE_RING_SPACING * zoom;
+
     if (distance <= maxRadius) {
       let label: string;
-      if (days === 1) label = "Tomorrow";
-      else if (days === 7) label = "1 Week";
-      else if (days === 14) label = "2 Weeks";
-      else if (days === 30) label = "1 Month";
-      else if (days === 60) label = "2 Months";
-      else if (days === 90) label = "3 Months";
-      else label = `${days}d`;
+      if (daysAhead === 1) label = "Tomorrow";
+      else if (daysAhead === 2) label = "2 Days";
+      else if (daysAhead === 3) label = "3 Days";
+      else if (daysAhead === 5) label = "5 Days";
+      else if (daysAhead === 7) label = "1 Week";
+      else if (daysAhead === 10) label = "10 Days";
+      else if (daysAhead === 14) label = "2 Weeks";
+      else if (daysAhead === 21) label = "3 Weeks";
+      else if (daysAhead === 30) label = "1 Month";
+      else if (daysAhead === 45) label = "1.5 Months";
+      else if (daysAhead === 60) label = "2 Months";
+      else if (daysAhead === 90) label = "3 Months";
+      else label = `${daysAhead}d`;
 
-      labels.push({ distance, label });
+      labels.push({ distance, label, daysAhead });
     }
   }
 
@@ -270,6 +344,7 @@ export function generateSampleTasks(): Task[] {
       createdAt: new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000),
       tags: ["finance", "urgent"],
       estimatedHours: 4,
+      dependencies: [], // No dependencies - this is a starting task
     },
     {
       id: "task-2",
@@ -281,6 +356,7 @@ export function generateSampleTasks(): Task[] {
       createdAt: new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000),
       tags: ["marketing", "website"],
       estimatedHours: 6,
+      dependencies: ["task-7"], // Depends on customer feedback analysis
     },
     {
       id: "task-3",
@@ -292,6 +368,7 @@ export function generateSampleTasks(): Task[] {
       createdAt: new Date(now.getTime() - 1 * 24 * 60 * 60 * 1000),
       tags: ["hr", "team"],
       estimatedHours: 3,
+      dependencies: ["task-8"], // Depends on onboarding new team members
     },
     {
       id: "task-4",
@@ -303,6 +380,7 @@ export function generateSampleTasks(): Task[] {
       createdAt: new Date(now.getTime() - 0.5 * 24 * 60 * 60 * 1000),
       tags: ["security", "urgent", "dev"],
       estimatedHours: 8,
+      dependencies: [], // No dependencies - critical urgent fix
     },
     {
       id: "task-5",
@@ -314,6 +392,7 @@ export function generateSampleTasks(): Task[] {
       createdAt: new Date(now.getTime() - 10 * 24 * 60 * 60 * 1000),
       tags: ["communications", "marketing"],
       estimatedHours: 2,
+      dependencies: ["task-1"], // Depends on financial report review
     },
     {
       id: "task-6",
@@ -325,6 +404,7 @@ export function generateSampleTasks(): Task[] {
       createdAt: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000),
       tags: ["infrastructure", "dev"],
       estimatedHours: 16,
+      dependencies: ["task-4"], // Depends on security bug fix
     },
     {
       id: "task-7",
@@ -336,6 +416,7 @@ export function generateSampleTasks(): Task[] {
       createdAt: new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000),
       tags: ["product", "research"],
       estimatedHours: 5,
+      dependencies: [], // No dependencies - independent research
     },
     {
       id: "task-8",
@@ -347,6 +428,7 @@ export function generateSampleTasks(): Task[] {
       createdAt: new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000),
       tags: ["hr", "onboarding"],
       estimatedHours: 4,
+      dependencies: [], // No dependencies - urgent HR task
     },
     {
       id: "task-9",
@@ -358,6 +440,7 @@ export function generateSampleTasks(): Task[] {
       createdAt: new Date(now.getTime() - 15 * 24 * 60 * 60 * 1000),
       tags: ["hr", "management"],
       estimatedHours: 20,
+      dependencies: ["task-3"], // Depends on team building event
     },
     {
       id: "task-10",
@@ -369,6 +452,7 @@ export function generateSampleTasks(): Task[] {
       createdAt: new Date(now.getTime() - 4 * 24 * 60 * 60 * 1000),
       tags: ["documentation", "dev"],
       estimatedHours: 8,
+      dependencies: ["task-6"], // Depends on database migration completion
     },
   ];
 }
