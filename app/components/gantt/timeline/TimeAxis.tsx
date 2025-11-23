@@ -73,26 +73,35 @@ export function TimeAxis({ startDate, endDate, zoomLevel }: TimeAxisProps) {
 
       return { topTier: buildMonthHeaders(), bottomTier: days };
     } else if (zoomLevel.scale === 'week') {
-      // Build weeks, but each week width is based on how many days from allDays fall in that week
+      // For week view: generate week cells where each week spans the actual days it contains
       const weeks: { label: string; width: number; date: Date }[] = [];
-      const weeksGenerated = eachWeekOfInterval({ start: normalizedStart, end: normalizedEnd });
 
-      weeksGenerated.forEach((weekStart) => {
-        const weekEnd = endOfWeek(weekStart);
+      // Track which day index we're at
+      let dayIndex = 0;
 
-        // Count how many days from allDays fall within this week
-        const daysInWeek = allDays.filter(day => {
-          return day >= weekStart && day <= weekEnd;
-        }).length;
+      while (dayIndex < allDays.length) {
+        const currentDay = allDays[dayIndex];
+        const weekStart = currentDay;
+        const weekEnd = endOfWeek(currentDay);
 
-        if (daysInWeek > 0) {
-          weeks.push({
-            label: format(weekStart, 'w'),
-            width: daysInWeek * zoomLevel.cellWidth,
-            date: weekStart,
-          });
+        // Count consecutive days that belong to this week
+        let daysInThisWeek = 0;
+        while (dayIndex < allDays.length) {
+          const day = allDays[dayIndex];
+          if (day <= weekEnd) {
+            daysInThisWeek++;
+            dayIndex++;
+          } else {
+            break;
+          }
         }
-      });
+
+        weeks.push({
+          label: format(weekStart, 'w'),
+          width: daysInThisWeek * zoomLevel.cellWidth,
+          date: weekStart,
+        });
+      }
 
       return { topTier: buildMonthHeaders(), bottomTier: weeks };
     }
